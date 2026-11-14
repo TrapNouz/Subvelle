@@ -1,0 +1,99 @@
+name: Publish verified SideStore IPA
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful build workflow run ID containing the IPA
+        required: true
+        type: string
+      tag:
+        description: Release version, matching the IPA marketing version
+        required: true
+        default: v1.0.0
+        type: string
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify successful build and resolve its source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_RUN: ${{ inputs.run_id }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          run_id = os.environ['SOURCE_RUN']
+          tag = os.environ['RELEASE_TAG']
+          if not run_id.isdecimal() or not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
+              raise SystemExit('Supply a numeric run ID and a vMAJOR.MINOR.PATCH tag.')
+          repo = os.environ['GH_REPO']
+          run = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/actions/runs/{run_id}']))
+          if run.get('conclusion') != 'success' or run.get('path') != '.github/workflows/build.yml' or run.get('head_repository', {}).get('full_name') != repo:
+              raise SystemExit('Release must come from a successful build.yml run in this repository.')
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('SOURCE_SHA=' + run['head_sha'] + '\n')
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          pattern: Subspace-*-unsigned-IPA
+          merge-multiple: true
+          path: release
+      - name: Validate the IPA version and structure
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import glob, hashlib, os, plistlib, struct, zipfile
+          files = glob.glob('release/*.ipa')
+          if len(files) != 1:
+              raise SystemExit('Exactly one IPA is required.')
+          path = files[0]
+          with zipfile.ZipFile(path) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit('IPA ZIP integrity check failed.')
+              info = plistlib.loads(archive.read('Payload/Subspace.app/Info.plist'))
+              if info['CFBundleShortVersionString'] != os.environ['RELEASE_TAG'][1:] or info['CFBundleIdentifier'] != 'app.subspace.ios' or info['CFBundleSupportedPlatforms'] != ['iPhoneOS']:
+                  raise SystemExit('IPA version, identifier, or device platform does not match.')
+              binary = archive.read('Payload/Subspace.app/' + info['CFBundleExecutable'])
+              if struct.unpack('<II', binary[:8]) != (0xfeedfacf, 0x100000c):
+                  raise SystemExit('IPA must contain a 64-bit ARM iPhone executable.')
+          with open(path, 'rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          with open(path + '.sha256', 'w') as checksum:
+              checksum.write(digest + '  ' + os.path.basename(path) + '\n')
+          print('Validated', path, digest)
+          PY
+      - name: Publish release with verified IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          SOURCE_RUN: ${{ inputs.run_id }}
+        run: |
+          cat > release-notes.md <<EOF_NOTES
+          Native iOS 26+ subscription tracker with Liquid Glass, subscription management, financial charts, payment calendar, local reminders, currency conversion, and JSON backups.
+
+          Download the IPA below and import it into SideStore. This IPA is unsigned; SideStore must sign it before installation. No Apple credentials or signing certificates were used by the build.
+
+          Verified build: https://github.com/$GH_REPO/actions/runs/$SOURCE_RUN
+          Source revision: $SOURCE_SHA
+
+          All 12 financial tests and four SwiftData persistence tests passed. Simulator compilation and unsigned ARM64 iPhone Release compilation succeeded. The IPA version, ZIP integrity, Payload structure, device platform, and executable architecture were checked. A SHA-256 checksum is attached.
+
+          Physical-device installation and notification delivery have not been manually verified. Historical charts reconstruct payment schedules, and exchange rates may not cover every billing currency. Open the app periodically to refresh the local notification queue.
+          EOF_NOTES
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/*.ipa release/*.sha256 --clobber
+            gh release edit "$RELEASE_TAG" --draft=false --title "Subspace $RELEASE_TAG" --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" release/*.ipa release/*.sha256 --target "$SOURCE_SHA" \
+              --title "Subspace $RELEASE_TAG" --notes-file release-notes.md
+          fi
