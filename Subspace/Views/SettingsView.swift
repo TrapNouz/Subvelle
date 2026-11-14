@@ -1,24 +1,22 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import CoreTransferable
 import SubspaceCore
 
-struct BackupDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
-    var data: Data
-    init(data: Data = Data()) { self.data = data }
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else { throw DataError.invalid("This backup file cannot be read.") }
-        self.data = data
+/// Data export avoids FileDocument's iOS 27 deprecation and also works on iOS 26.
+struct BackupExport: Transferable, Sendable {
+    var data: Data = Data()
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .json) { item in item.data }
     }
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.openURL) private var openURL
     @State private var importing = false
     @State private var exporting = false
-    @State private var document = BackupDocument()
+    @State private var document = BackupExport()
     @State private var pendingImport: Data?
     @State private var importCount = 0
     @State private var confirmation = false
@@ -59,7 +57,7 @@ struct SettingsView: View {
                 } header: { Text("Notifications") } footer: { Text("Delivered at 9 AM local time. Open Subspace periodically to refresh the queue. Defaults apply to new plans.") }
                 Section {
                     Button("Export backup", systemImage: "square.and.arrow.up") {
-                        do { document = BackupDocument(data: try store.backupData()); exporting = true }
+                        do { document = BackupExport(data: try store.backupData()); exporting = true }
                         catch { store.error = error.localizedDescription }
                     }.accessibilityIdentifier("exportBackup")
                     Button("Import backup", systemImage: "square.and.arrow.down") { importing = true }
@@ -76,9 +74,9 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settingsScroll")
                 .scrollEdgeEffectStyle(.hard, for: .bottom)
                 .subscriptionToolbar()
-                .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: "Subspace-\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash)))") { outcome in
+                .fileExporter(isPresented: $exporting, item: document, contentTypes: [.json], defaultFilename: "Subspace-\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash)))", onCompletion: { outcome in
                     switch outcome { case .success: result = "Backup exported."; case .failure(let error): store.error = error.localizedDescription }
-                }
+                })
                 .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { outcome in
                     do {
                         let url = try outcome.get()

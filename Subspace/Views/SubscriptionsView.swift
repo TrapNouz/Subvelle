@@ -27,15 +27,16 @@ struct SubscriptionsView: View {
         }
     }
     private var subscriptionList: some View {
-        List {
+        let rows = filtered
+        return List {
             Section {
                 ViewThatFits(in: .horizontal) {
                     HStack { filterMenu; Spacer(); sortMenu }
                     VStack(alignment: .leading, spacing: 12) { filterMenu; sortMenu }
                 }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
             }
-            Section("\(filtered.count) subscriptions") {
-                ForEach(filtered) { record in
+            Section("\(rows.count) subscriptions") {
+                ForEach(rows) { record in
                     Button { selected = record } label: { SubscriptionRow(record: record) }.buttonStyle(.plain)
                         .accessibilityIdentifier("subscriptionRow-" + record.name)
                         .swipeActions(edge: .leading) { Button("Edit", systemImage: "pencil") { editing = record }.tint(.purple) }
@@ -50,7 +51,7 @@ struct SubscriptionsView: View {
                             }
                         }
                 }
-                if filtered.isEmpty {
+                if rows.isEmpty {
                     ContentUnavailableView("No matching subscriptions", systemImage: "line.3.horizontal.decrease", description: Text("Try a different search, category, or status."))
                     Button("Clear filters") { query = SubscriptionListQuery() }
                 }
@@ -60,7 +61,7 @@ struct SubscriptionsView: View {
         .scrollContentBackground(.hidden).scrollEdgeEffectStyle(.hard, for: .bottom)
         .searchable(text: $query.search, prompt: "Search services and notes")
         .scrollDismissesKeyboard(.interactively)
-        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: filtered.map(\.id))
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: rows.map(\.id))
     }
     private var filterMenu: some View {
         Menu {

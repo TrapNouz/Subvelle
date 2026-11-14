@@ -68,7 +68,13 @@ import SubspaceCore
         XCTAssertTrue(element("subscriptionRow-Plan 01").waitForExistence(timeout: 10))
     }
     func testLargeTextLightAppearanceAndReducedMotion() throws {
-        try launch(populated: true, largeText: true, light: true, reducedMotion: true)
+        setAccessibilitySwitch(path: ["Accessibility", "Motion"], label: "Reduce Motion", enabled: true)
+        setAccessibilitySwitch(path: ["Accessibility", "Display & Text Size"], label: "Reduce Transparency", enabled: true)
+        defer {
+            setAccessibilitySwitch(path: ["Accessibility", "Motion"], label: "Reduce Motion", enabled: false)
+            setAccessibilitySwitch(path: ["Accessibility", "Display & Text Size"], label: "Reduce Transparency", enabled: false)
+        }
+        try launch(populated: true, largeText: true, light: true)
         for (index, tab) in tabs.enumerated() {
             open(tab); assertNavigation(); capture("Accessibility-Light-\(tab)-Top")
             revealAboveTabBar(bottoms[index]); capture("Accessibility-Light-\(tab)-Bottom")
@@ -82,10 +88,10 @@ import SubspaceCore
         open("Settings"); assertNavigation(); capture("Landscape-Settings")
         revealAboveTabBar("settingsBottom"); capture("Landscape-Settings-Bottom")
     }
-    private func launch(populated: Bool, largeText: Bool = false, light: Bool = false, reducedMotion: Bool = false) throws {
+    private func launch(populated: Bool, largeText: Bool = false, light: Bool = false) throws {
         app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_CA"]
-        app.launchEnvironment = ["SUBSPACE_UI_TEST_ID": UUID().uuidString, "SUBSPACE_UI_TEST_RESET": "1", "SUBSPACE_UI_TEST_LARGE_TEXT": largeText ? "1" : "0", "SUBSPACE_UI_TEST_APPEARANCE": light ? "light" : "dark", "SUBSPACE_UI_TEST_REDUCE_MOTION": reducedMotion ? "1" : "0", "SUBSPACE_UI_TEST_REDUCE_TRANSPARENCY": reducedMotion ? "1" : "0"]
+        app.launchEnvironment = ["SUBSPACE_UI_TEST_ID": UUID().uuidString, "SUBSPACE_UI_TEST_RESET": "1", "SUBSPACE_UI_TEST_LARGE_TEXT": largeText ? "1" : "0", "SUBSPACE_UI_TEST_APPEARANCE": light ? "light" : "dark"]
         let rates = ExchangeRates(rates: ["CAD": Decimal(135) / 100, "EUR": Decimal(9) / 10])
         app.launchEnvironment["SUBSPACE_UI_TEST_RATES"] = String(decoding: try JSONEncoder().encode(rates), as: UTF8.self)
         if populated {
@@ -123,6 +129,29 @@ import SubspaceCore
     }
     private func swipeUp() {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.75)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.25)))
+    }
+    private func setAccessibilitySwitch(path: [String], label: String, enabled: Bool) {
+        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        settings.terminate(); settings.launch()
+        for title in path {
+            let target = settings.staticTexts[title].firstMatch
+            for _ in 0..<10 {
+                if target.exists && target.isHittable { break }
+                settings.swipeUp()
+            }
+            XCTAssertTrue(target.exists && target.isHittable, "Settings destination missing: \(title)")
+            target.tap()
+        }
+        let control = settings.switches[label].firstMatch
+        for _ in 0..<8 {
+            if control.exists && control.isHittable { break }
+            settings.swipeUp()
+        }
+        XCTAssertTrue(control.exists && control.isHittable, "Accessibility setting missing: \(label)")
+        let isOn = (control.value as? String) == "1"
+        if isOn != enabled { control.tap() }
+        XCTAssertEqual(control.value as? String, enabled ? "1" : "0")
+        settings.terminate()
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

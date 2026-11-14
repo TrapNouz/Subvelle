@@ -28,16 +28,12 @@ import SubspaceCore
 
 private struct UITestingOverrides: ViewModifier {
     @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ViewBuilder func body(content: Content) -> some View {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
             let environment = ProcessInfo.processInfo.environment
             content
                 .dynamicTypeSize(environment["SUBSPACE_UI_TEST_LARGE_TEXT"] == "1" ? .accessibility5 : typeSize)
-                .environment(\.accessibilityReduceMotion, environment["SUBSPACE_UI_TEST_REDUCE_MOTION"] == "1" || reduceMotion)
-                .environment(\.accessibilityReduceTransparency, environment["SUBSPACE_UI_TEST_REDUCE_TRANSPARENCY"] == "1" || reduceTransparency)
                 .preferredColorScheme(environment["SUBSPACE_UI_TEST_APPEARANCE"] == "light" ? .light : .dark)
         } else { content }
         #else

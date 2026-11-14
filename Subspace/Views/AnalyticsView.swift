@@ -129,6 +129,7 @@ struct AnalyticsView: View {
     @State private var calendarOpen = false
     @State private var selectedAngle: Double?
     @State private var selectedService: SubscriptionRecord?
+    @State private var serviceSelection: String?
     @State private var explanation = false
     private var active: [SubscriptionRecord] { store.visible.filter { $0.status == .active && ($0.endDate.map { $0 >= Calendar.current.startOfDay(for: .now) } ?? true) } }
     private var categories: [BreakdownItem] {
@@ -208,38 +209,45 @@ struct AnalyticsView: View {
         }
     }
     private var serviceBreakdown: some View {
-        Surface {
+        let rows = ranked
+        let total = max(rows.reduce(0) { $0 + NSDecimalNumber(decimal: annual($1)).doubleValue }, 1)
+        return Surface {
             VStack(spacing: 18) {
-                if !ranked.isEmpty {
-                    Chart(Array(ranked.prefix(6))) { record in
+                if !rows.isEmpty {
+                    Chart(Array(rows.prefix(6))) { record in
                         BarMark(x: .value("Annual cost", NSDecimalNumber(decimal: annual(record)).doubleValue), y: .value("Service", record.id.uuidString))
                             .foregroundStyle(Color.spaceAccent).cornerRadius(4)
                             .accessibilityLabel(record.name).accessibilityValue(store.money(annual(record)))
+                            .opacity(serviceSelection == nil || serviceSelection == record.id.uuidString ? 1 : 0.4)
                     }
+                    .chartYSelection(value: $serviceSelection)
                     .chartYAxis {
                         AxisMarks { value in
                             AxisValueLabel {
-                                if let id = value.as(String.self), let record = ranked.first(where: { $0.id.uuidString == id }) { Text(record.name).font(.caption).lineLimit(1) }
+                                if let id = value.as(String.self), let record = rows.first(where: { $0.id.uuidString == id }) { Text(record.name).font(.caption).lineLimit(1) }
                             }
                         }
                     }
                     .chartXAxis { AxisMarks { value in AxisValueLabel { if let amount = value.as(Double.self) { Text(amount, format: .number.notation(.compactName)) } } } }
                     .chartXAxisLabel(store.currency)
-                    .frame(height: serviceRowHeight * Double(min(ranked.count, 6)) + 35)
+                    .frame(height: serviceRowHeight * Double(min(rows.count, 6)) + 35)
                     .accessibilityIdentifier("serviceChart")
+                    if let record = rows.first(where: { $0.id.uuidString == serviceSelection }) {
+                        Text("\(record.name) · \(store.money(annual(record))) / year").font(.subheadline.weight(.semibold))
+                    }
                 }
-                ForEach(ranked) { record in
+                ForEach(rows) { record in
                     Button { selectedService = record } label: {
                         VStack(alignment: .leading, spacing: 8) {
                             ViewThatFits(in: .horizontal) {
                                 HStack { Text(record.name); Spacer(); Text(store.money(annual(record))).fontWeight(.semibold) }
                                 VStack(alignment: .leading, spacing: 4) { Text(record.name); Text(store.money(annual(record))).fontWeight(.semibold) }
                             }.font(.subheadline)
-                            ProgressView(value: NSDecimalNumber(decimal: annual(record)).doubleValue, total: max(ranked.reduce(0) { $0 + NSDecimalNumber(decimal: annual($1)).doubleValue }, 1)).tint(.spaceAccent)
+                            ProgressView(value: NSDecimalNumber(decimal: annual(record)).doubleValue, total: total).tint(.spaceAccent)
                         }.foregroundStyle(.primary)
                     }.buttonStyle(.plain)
                 }
-                if ranked.isEmpty { Text("No converted amounts available.").foregroundStyle(.secondary) }
+                if rows.isEmpty { Text("No converted amounts available.").foregroundStyle(.secondary) }
             }
         }
     }
