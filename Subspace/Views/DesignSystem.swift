@@ -5,6 +5,7 @@ import SubspaceCore
 
 extension Color {
     static let spaceBackground = Color(red: 0.045, green: 0.045, blue: 0.055)
+    static let spaceAction = Color(red: 0.42, green: 0.28, blue: 0.82)
     static let spaceAccent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.69, green: 0.60, blue: 1, alpha: 1)
@@ -117,7 +118,7 @@ struct AddSubscriptionButton: View {
     @Environment(AppNavigation.self) private var navigation
     var body: some View {
         Button("Add subscription", systemImage: "plus") { navigation.sheet = .add }
-            .buttonStyle(.glassProminent).controlSize(.large)
+            .buttonStyle(.glassProminent).tint(.spaceAction).controlSize(.large)
             .accessibilityIdentifier("emptyStateAdd")
     }
 }
