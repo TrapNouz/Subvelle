@@ -160,12 +160,15 @@ import SubspaceCore
             XCTAssertTrue(target.exists && target.isHittable, "Settings destination missing: \(title)")
             target.tap()
         }
-        let control = settings.switches[label].firstMatch
+        var control = settings.switches[label].firstMatch
         for _ in 0..<8 {
             if control.exists && control.isHittable { break }
             settings.swipeUp()
         }
         XCTAssertTrue(control.exists && control.isHittable, "Accessibility setting missing: \(label)")
+        if let nested = control.switches.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+            control = nested
+        }
         let expected = enabled ? "1" : "0"
         func isExpected() -> Bool {
             if let value = control.value as? NSNumber { return value.boolValue == enabled }
