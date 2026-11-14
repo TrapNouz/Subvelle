@@ -3,50 +3,84 @@ import SubspaceCore
 
 struct SubscriptionsView: View {
     @Environment(AppStore.self) private var store
-    @State private var search = ""
-    @State private var filter = "All"
-    @State private var category: SubspaceCore.Category?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var query = SubscriptionListQuery()
     @State private var selected: SubscriptionRecord?
-    private var filtered: [SubscriptionRecord] {
-        store.records.filter {
-            (filter == "Archived" ? $0.archived : !$0.archived) &&
-            (filter == "All" || filter == "Archived" || $0.status.rawValue.capitalized == filter) &&
-            (category == nil || $0.category == category) &&
-            (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.notes.localizedCaseInsensitiveContains(search))
-        }
-    }
+    @State private var editing: SubscriptionRecord?
+    private var filtered: [SubscriptionRecord] { query.apply(to: store.records, reportingCurrency: store.currency, rates: store.rates) }
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Picker("Status", selection: $filter) { ForEach(["All", "Active", "Paused", "Canceled", "Archived"], id: \.self) { Text($0).tag($0) } }
-                    Picker("Category", selection: $category) {
-                        Text("All categories").tag(nil as SubspaceCore.Category?)
-                        ForEach(SubspaceCore.Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
+            Group {
+                if store.records.isEmpty {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            SubscriptionEmptyState(title: "Everything recurring, together", message: "Search 147 familiar services or create your own. Enter the price you pay; we’ll take care of the schedule.", symbol: "rectangle.stack")
+                            PrivacyFootnote().accessibilityIdentifier("subscriptionsBottom")
+                        }.padding(20).frame(maxWidth: 700).frame(maxWidth: .infinity)
                     }
-                }.listRowBackground(Color.primary.opacity(0.04))
-                Section("\(filtered.count) subscriptions") {
-                    ForEach(filtered) { record in
-                        Button { selected = record } label: { SubscriptionRow(record: record) }.buttonStyle(.plain)
-                            .swipeActions {
-                                Button(record.archived ? "Restore" : "Archive", systemImage: record.archived ? "arrow.uturn.backward" : "archivebox") {
-                                    var updated = record; updated.archived.toggle()
-                                    do { try store.save(updated) } catch { store.error = error.localizedDescription }
-                                }.tint(.purple)
-                            }
-                    }
-                }.listRowBackground(Color.primary.opacity(0.04))
-                if filtered.isEmpty {
-                    ContentUnavailableView(search.isEmpty ? "No subscriptions here" : "No matches", systemImage: "rectangle.stack", description: Text(search.isEmpty ? "Use Add subscription to start tracking, or change your filters." : "Try another service name or note."))
-                        .listRowBackground(Color.clear)
-                }
+                } else { subscriptionList }
             }
-            .scrollContentBackground(.hidden).background { SpaceBackground() }
-            .searchable(text: $search, prompt: "Search services and notes")
-            .navigationTitle("Subscriptions")
+            .background { SpaceBackground() }.navigationTitle("Subscriptions")
+            .subscriptionToolbar()
             .sheet(item: $selected) { SubscriptionDetail(record: $0) }
+            .sheet(item: $editing) { SubscriptionEditor(record: $0) }
         }
     }
+    private var subscriptionList: some View {
+        let rows = filtered
+        return List {
+            Section {
+                ViewThatFits(in: .horizontal) {
+                    HStack { filterMenu; Spacer(); sortMenu }
+                    VStack(alignment: .leading, spacing: 12) { filterMenu; sortMenu }
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            }
+            Section("\(rows.count) subscriptions") {
+                ForEach(rows) { record in
+                    Button { selected = record } label: { SubscriptionRow(record: record) }.buttonStyle(.plain)
+                        .accessibilityIdentifier("subscriptionRow-" + record.name)
+                        .swipeActions(edge: .leading) { Button("Edit", systemImage: "pencil") { editing = record }.tint(.purple) }
+                        .swipeActions { Button(record.archived ? "Restore" : "Archive", systemImage: record.archived ? "arrow.uturn.backward" : "archivebox") { archive(record) }.tint(.purple) }
+                        .contextMenu {
+                            Button("View details", systemImage: "info.circle") { selected = record }
+                            Button("Edit", systemImage: "pencil") { editing = record }
+                            Button(record.archived ? "Restore" : "Archive", systemImage: "archivebox") { archive(record) }
+                            Button(record.status == .active ? "Pause tracking" : "Resume tracking", systemImage: record.status == .active ? "pause" : "play") {
+                                var updated = record; updated.status = record.status == .active ? .paused : .active
+                                save(updated)
+                            }
+                        }
+                }
+                if rows.isEmpty {
+                    ContentUnavailableView("No matching subscriptions", systemImage: "line.3.horizontal.decrease", description: Text("Try a different search, category, or status."))
+                    Button("Clear filters") { query = SubscriptionListQuery() }
+                }
+            }
+            Section { Text("Amounts stay in their billing currency. Payment amount sorting converts each charge to \(store.currency); unavailable conversions appear last.").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("subscriptionsBottom") }
+        }
+        .scrollContentBackground(.hidden).scrollEdgeEffectStyle(.hard, for: .bottom)
+        .searchable(text: $query.search, prompt: "Search services and notes")
+        .scrollDismissesKeyboard(.interactively)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: rows.map(\.id))
+    }
+    private var filterMenu: some View {
+        Menu {
+            Picker("Status", selection: $query.scope) { ForEach(SubscriptionScope.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
+            Picker("Category", selection: $query.category) {
+                Text("All categories").tag(nil as SubspaceCore.Category?)
+                ForEach(SubspaceCore.Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
+            }
+            if query.category != nil || query.scope != .all { Button("Reset filters") { query.category = nil; query.scope = .all } }
+        } label: { Label(query.category?.rawValue ?? query.scope.rawValue, systemImage: "line.3.horizontal.decrease") }
+        .buttonStyle(.glass).accessibilityLabel("Filter subscriptions").accessibilityIdentifier("subscriptionFilters")
+    }
+    private var sortMenu: some View {
+        Menu { Picker("Sort", selection: $query.sort) { ForEach(SubscriptionSort.allCases, id: \.self) { Text($0.rawValue).tag($0) } } }
+        label: { Label(query.sort.rawValue, systemImage: "arrow.up.arrow.down") }
+            .buttonStyle(.glass).accessibilityLabel("Sort subscriptions").accessibilityIdentifier("subscriptionSort")
+    }
+    private func archive(_ record: SubscriptionRecord) { var updated = record; updated.archived.toggle(); save(updated) }
+    private func save(_ record: SubscriptionRecord) { do { try store.save(record) } catch { store.error = error.localizedDescription } }
 }
 
 struct PresetPicker: View {
@@ -60,7 +94,7 @@ struct PresetPicker: View {
         NavigationStack {
             List {
                 Section {
-                    Button { create(nil) } label: { Label("Create custom subscription", systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
+                    Button { create(nil) } label: { Label("Create custom subscription", systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }.accessibilityIdentifier("createCustomSubscription")
                     Picker("Category", selection: $category) {
                         Text("All categories").tag(nil as SubspaceCore.Category?)
                         ForEach(SubspaceCore.Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
@@ -109,12 +143,12 @@ struct SubscriptionEditor: View {
         NavigationStack {
             Form {
                 Section("Service") {
-                    TextField("Service name", text: $record.name).textContentType(.organizationName)
+                    TextField("Service name", text: $record.name).textContentType(.organizationName).accessibilityIdentifier("serviceName")
                     Picker("Icon", selection: $record.symbol) { ForEach(symbols, id: \.self) { Image(systemName: $0).tag($0) } }
                     Picker("Category", selection: $record.category) { ForEach(SubspaceCore.Category.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) } }
                 }
                 Section {
-                    TextField("Payment amount", text: $amountText).keyboardType(.decimalPad)
+                    TextField("Payment amount", text: $amountText).keyboardType(.decimalPad).accessibilityIdentifier("paymentAmount")
                     CurrencyPicker(selection: $record.currency, title: "Billing currency")
                     Picker("Billing frequency", selection: $intervalChoice) {
                         ForEach(Array(BillingInterval.standard.enumerated()), id: \.offset) { index, interval in Text(interval.label).tag(index) }
@@ -147,7 +181,7 @@ struct SubscriptionEditor: View {
             .navigationTitle(store.records.contains(where: { $0.id == record.id }) ? "Edit subscription" : "New subscription").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save", systemImage: "checkmark", action: save).fontWeight(.semibold).disabled(saved) }
+                ToolbarItem(placement: .confirmationAction) { Button("Save", systemImage: "checkmark", action: save).fontWeight(.semibold).disabled(saved).accessibilityIdentifier("saveSubscription") }
             }
             .onAppear {
                 if record.amount > 0 { amountText = NSDecimalNumber(decimal: record.amount).description(withLocale: Locale.current) }

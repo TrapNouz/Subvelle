@@ -3,91 +3,97 @@ import SubspaceCore
 
 struct OverviewView: View {
     @Environment(AppStore.self) private var store
-    @State private var selected: SubscriptionRecord?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var selected: SubscriptionRecord?
+    private var largest: [SubscriptionRecord] {
+        store.visible.filter { $0.status == .active && ($0.endDate.map { $0 >= Calendar.current.startOfDay(for: .now) } ?? true) && store.converted($0) != nil }
+            .sorted { normalized($0) > normalized($1) }
+    }
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased()).font(.caption.weight(.medium)).tracking(1.5).foregroundStyle(.secondary)
-                            Text("Your money.\nIn perspective.").font(.largeTitle.bold()).tracking(-1)
-                        }
-                        Spacer()
-                        Image(systemName: "circle.hexagongrid.fill").font(.largeTitle).foregroundStyle(Color.spaceAccent).padding(14).glassEffect(.regular, in: .circle).accessibilityHidden(true)
-                    }
+                VStack(alignment: .leading, spacing: 22) {
                     if store.visible.isEmpty {
+                        SubscriptionEmptyState(title: "Make room for clarity", message: "Know what you pay, what’s coming next, and what you could save. Start with one subscription.", symbol: "circle.hexagongrid")
                         Surface {
-                            ContentUnavailableView("A little clarity starts here", systemImage: "sparkles", description: Text("Add your first subscription to see what’s recurring, what’s next, and what it all adds up to."))
-                        }
-                    } else {
-                        Surface {
-                            VStack(alignment: .leading, spacing: 20) {
-                                Label("MONTHLY AVERAGE", systemImage: "waveform.path").font(.caption.weight(.semibold)).tracking(1).foregroundStyle(.secondary)
-                                Text(store.money(store.summary.monthly)).font(.system(.largeTitle, design: .rounded, weight: .bold)).minimumScaleFactor(0.5).contentTransition(.numericText()).foregroundStyle(LinearGradient(colors: [.primary, .spaceAccent], startPoint: .leading, endPoint: .trailing))
-                                Text("Normalized across your active subscriptions").font(.caption).foregroundStyle(.secondary)
-                                Divider()
-                                HStack(alignment: .top) {
-                                    metric("Annual", value: store.money(store.summary.annual))
-                                    Spacer()
-                                    metric("Weekly", value: store.money(store.summary.weekly))
-                                    Spacer()
-                                    metric("Active", value: "\(store.summary.activeCount)")
-                                }
+                            VStack(alignment: .leading, spacing: 18) {
+                                benefit("Every payment, together", description: "Track weekly, monthly, annual, and custom plans.", symbol: "rectangle.stack")
+                                benefit("A little less surprise", description: "See renewals ahead of time with local reminders.", symbol: "calendar.badge.clock")
+                                benefit("The full picture", description: "Understand your average costs in one currency.", symbol: "chart.bar.xaxis")
                             }
                         }
+                    } else {
+                        monthlyCard
                         RateNotice()
                         if let next = store.upcoming.first {
-                            Button { selected = next.subscription } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("NEXT PAYMENT").font(.caption.weight(.semibold)).tracking(1)
-                                        Text(next.subscription.name).font(.title3.bold())
-                                        Text("\(countdown(next.date)) · \(Money.format(next.subscription.amount, currency: next.subscription.currency))").font(.subheadline)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right").font(.title3)
-                                }.padding(22).foregroundStyle(.primary)
-                            }.buttonStyle(.plain).glassEffect(.regular.tint(.spaceAccent.opacity(0.12)).interactive(), in: .rect(cornerRadius: 26))
-                        }
-                        SectionTitle(title: "The bigger picture", subtitle: "Scheduled payments · \(Date.now.formatted(.dateTime.year()))")
-                        Surface { SpendingChart(compact: true) }
-                        if !store.upcoming.isEmpty {
-                            SectionTitle(title: "Coming up", subtitle: "Your next renewal for each active service")
                             Surface {
-                                VStack(spacing: 14) {
+                                Button { selected = next.subscription } label: {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack { Text("Next payment").font(.subheadline).foregroundStyle(.secondary); Spacer(); Text(countdown(next.date)).font(.caption.weight(.semibold)).foregroundStyle(Color.spaceAccent) }
+                                        SubscriptionRow(record: next.subscription, date: next.date)
+                                    }
+                                }.buttonStyle(.plain).accessibilityIdentifier("nextPayment")
+                            }
+                        }
+                        Surface {
+                            VStack(alignment: .leading, spacing: 16) {
+                                SectionTitle(title: "Your year in payments", subtitle: "Scheduled charges · \(Date.now.formatted(.dateTime.year()))")
+                                SpendingChart(compact: true)
+                            }
+                        }
+                        if !store.upcoming.isEmpty {
+                            SectionTitle(title: "Upcoming renewals", subtitle: "The next payment for each service")
+                            Surface {
+                                VStack(spacing: 12) {
                                     ForEach(Array(store.upcoming.prefix(5))) { payment in
                                         Button { selected = payment.subscription } label: { SubscriptionRow(record: payment.subscription, date: payment.date) }.buttonStyle(.plain)
                                     }
                                 }
                             }
                         }
-                        let largest = store.visible.filter { $0.status == .active && ($0.endDate.map { $0 >= Calendar.current.startOfDay(for: .now) } ?? true) && store.converted($0) != nil }.sorted { normalized($0) > normalized($1) }
                         if !largest.isEmpty {
-                            SectionTitle(title: "Largest commitments", subtitle: "Ranked by normalized annual cost in \(store.currency)")
+                            SectionTitle(title: "Largest expenses", subtitle: "Normalized annual cost · \(store.currency)")
                             Surface {
-                                VStack(spacing: 14) {
+                                VStack(spacing: 16) {
                                     ForEach(Array(largest.prefix(3))) { record in
                                         Button { selected = record } label: {
-                                            HStack {
-                                                ServiceIcon(record: record)
-                                                Text(record.name).font(.subheadline.weight(.medium))
-                                                Spacer()
-                                                Text(store.money(normalized(record))).font(.subheadline.weight(.semibold))
-                                            }.foregroundStyle(.primary)
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                SubscriptionRow(record: record)
+                                                Text("\(store.money(normalized(record))) / year").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                                            }
                                         }.buttonStyle(.plain)
                                     }
                                 }
                             }
                         }
                     }
-                    Text("PRIVATE BY DESIGN · STORED ON YOUR IPHONE").font(.caption2.weight(.medium)).tracking(1).foregroundStyle(.tertiary).frame(maxWidth: .infinity)
-                }.padding(20)
+                    PrivacyFootnote().accessibilityIdentifier("overviewBottom")
+                }.padding(20).frame(maxWidth: 700).frame(maxWidth: .infinity)
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: store.visible.isEmpty)
             }
-            .background { SpaceBackground() }.navigationTitle("Subspace").navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier("overviewScroll")
+            .scrollEdgeEffectStyle(.hard, for: .bottom)
+            .background { SpaceBackground() }.navigationTitle("Overview")
+            .subscriptionToolbar()
             .sheet(item: $selected) { SubscriptionDetail(record: $0) }
-            .animation(reduceMotion ? nil : .spring(response: 0.45), value: store.summary.monthly)
+        }
+    }
+    private var monthlyCard: some View {
+        Surface {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Monthly average").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                Text(store.money(store.summary.monthly)).font(.system(.largeTitle, design: .rounded, weight: .bold)).monospacedDigit()
+                    .contentTransition(reduceMotion ? .identity : .numericText()).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("monthlyAverage")
+                Text("Your recurring commitment, averaged over the year.").font(.caption).foregroundStyle(.secondary)
+                Divider()
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 130), alignment: .leading)], alignment: .leading, spacing: 16) {
+                    metric("Annual average", value: store.money(store.summary.annual))
+                    metric("Weekly equivalent", value: store.money(store.summary.weekly))
+                    metric("Active plans", value: String(store.summary.activeCount))
+                }
+            }.animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.05), value: store.summary.monthly)
         }
     }
     private func normalized(_ record: SubscriptionRecord) -> Decimal { (store.converted(record) ?? 0) * record.interval.periodsPerYear }
@@ -96,6 +102,12 @@ struct OverviewView: View {
         return days == 0 ? "Today" : days == 1 ? "Tomorrow" : "In \(days) days"
     }
     private func metric(_ title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.subheadline.weight(.semibold)).contentTransition(.numericText()) }.minimumScaleFactor(0.6)
+        VStack(alignment: .leading, spacing: 6) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.headline).monospacedDigit().contentTransition(reduceMotion ? .identity : .numericText()) }
+    }
+    private func benefit(_ title: String, description: String, symbol: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: symbol).foregroundStyle(Color.spaceAccent).frame(width: 24).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) { Text(title).font(.subheadline.weight(.semibold)); Text(description).font(.caption).foregroundStyle(.secondary) }
+        }
     }
 }

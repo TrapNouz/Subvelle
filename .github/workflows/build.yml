@@ -2,9 +2,7 @@ name: Test and build SideStore IPA
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
     tags: ['v*']
-  pull_request:
 permissions:
   contents: read
 concurrency:
@@ -19,9 +17,24 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      - name: Verify iOS 26 SDK
+      - name: Prefer Xcode 27 when installed
         run: |
-          xcodebuild -version
+          python3 - <<'PYCODE'
+          import glob, os, re
+          installed = glob.glob('/Applications/Xcode*.app')
+          print('Installed Xcode applications:', installed)
+          modern = [path for path in installed if re.search(r'Xcode[_ ]27(?:[._ ]|\.app)', path)]
+          if modern:
+              selected = max(modern, key=lambda path: (tuple(map(int, re.findall(r'\d+', path))), 'beta' not in path.lower()))
+              with open(os.environ['GITHUB_ENV'], 'a') as env:
+                  env.write('DEVELOPER_DIR=' + selected + '/Contents/Developer\n')
+          else:
+              print('Xcode 27 is not installed; using the runner’s current stable Xcode.')
+          PYCODE
+      - name: Record SDK and compatibility inventory
+        run: |
+          xcodebuild -version | tee CIEnvironment.txt
+          xcodebuild -showsdks | tee -a CIEnvironment.txt
           SDK=$(xcrun --sdk iphoneos --show-sdk-version)
           test "${SDK%%.*}" -ge 26
       - name: Install project generator
@@ -30,25 +43,73 @@ jobs:
         run: xcodegen generate
       - name: Test financial domain
         run: swift test --parallel
-      - name: Select available iPhone simulator
+      - name: Discover iOS 26 and iOS 27 simulators
         run: |
           xcrun simctl list devices available -j > "$RUNNER_TEMP/devices.json"
-          python3 - <<'PY'
-          import json, os
+          python3 - <<'PYCODE'
+          import json, os, re
           data = json.load(open(os.environ['RUNNER_TEMP'] + '/devices.json'))
-          candidates = [(runtime, device) for runtime, devices in data['devices'].items() if 'iOS-26' in runtime for device in devices if 'iPhone' in device['name'] and device.get('isAvailable')]
-          if not candidates:
-              raise SystemExit('An iOS 26 iPhone simulator is required on this runner.')
-          device = sorted(candidates, key=lambda item: item[0], reverse=True)[0][1]
-          with open(os.environ['GITHUB_ENV'], 'a') as env:
-              env.write('SIMULATOR_ID=' + device['udid'] + '\n')
-          PY
-      - name: Compile app and test SwiftData persistence
+          matrix = []
+          for major in (26, 27):
+              options = [(runtime, device) for runtime, devices in data['devices'].items() if re.search(r'iOS-' + str(major) + r'(?:-|$)', runtime) for device in devices if 'iPhone' in device['name'] and device.get('isAvailable')]
+              if not options:
+                  print(f'iOS {major} runtime unavailable on this runner; not tested.')
+                  continue
+              runtime = max({item[0] for item in options}, key=lambda value: tuple(map(int, re.findall(r'\d+', value))))
+              devices = [device for candidate, device in options if candidate == runtime]
+              device = min(devices, key=lambda item: ('Max' in item['name'] or 'Plus' in item['name'], 'Pro' in item['name'], item['name']))
+              matrix.append({'major': major, 'runtime': runtime, 'name': device['name'], 'udid': device['udid']})
+          if not matrix:
+              raise SystemExit('No supported iOS 26/27 iPhone simulator is available.')
+          json.dump(matrix, open('SimulatorMatrix.json', 'w'), indent=2)
+          print(json.dumps(matrix, indent=2))
+          PYCODE
+      - name: Compile and run persistence and UI regression tests
         run: |
-          set -o pipefail
-          xcodebuild test -project Subspace.xcodeproj -scheme Subspace \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
+          set -euo pipefail
+          python3 - <<'PYCODE' > "$RUNNER_TEMP/simulators.tsv"
+          import json
+          for device in json.load(open('SimulatorMatrix.json')):
+              print(str(device['major']) + '\t' + device['udid'])
+          PYCODE
+          first_identifier=$(head -n 1 "$RUNNER_TEMP/simulators.tsv" | cut -f 2)
+          xcodebuild build-for-testing -project Subspace.xcodeproj -scheme Subspace \
+            -destination "platform=iOS Simulator,id=$first_identifier" \
+            -derivedDataPath TestBuild CODE_SIGNING_ALLOWED=NO
+          while IFS=$'\t' read -r major identifier; do
+            xcrun simctl boot "$identifier"
+            xcrun simctl bootstatus "$identifier" -b
+            xcrun simctl status_bar "$identifier" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+            xcodebuild test-without-building -project Subspace.xcodeproj -scheme Subspace \
+              -destination "platform=iOS Simulator,id=$identifier" -derivedDataPath TestBuild \
+              -parallel-testing-enabled NO -resultBundlePath "TestResults-iOS$major.xcresult" \
+              CODE_SIGNING_ALLOWED=NO
+            xcrun simctl shutdown "$identifier"
+          done < "$RUNNER_TEMP/simulators.tsv"
+      - name: Export UI screenshots
+        if: always()
+        run: |
+          mkdir -p Screenshots
+          for result in TestResults-iOS*.xcresult; do
+            if [ -d "$result" ]; then
+              name="${result%.xcresult}"
+              xcrun xcresulttool export attachments --path "$result" --output-path "Screenshots/$name"
+            fi
+          done
+      - name: Render screenshot review contact sheets
+        if: always()
+        run: |
+          swift Tools/RenderScreenshotPreviews.swift Screenshots
+      - name: Upload simulator screenshots and SDK inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots-and-sdk-inventory
+          path: |
+            Screenshots
+            CIEnvironment.txt
+            SimulatorMatrix.json
+          if-no-files-found: error
       - name: Determine version
         run: |
           python3 - <<'PY'
@@ -85,7 +146,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: TestResults.xcresult
+          path: TestResults-*.xcresult
           if-no-files-found: ignore
   release:
     if: startsWith(github.ref, 'refs/tags/v')
