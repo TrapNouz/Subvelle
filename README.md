@@ -15,9 +15,13 @@ A native, local-first iPhone subscription manager for **iOS 26+**, using SwiftUI
 - Unit tests for recurrence, financial summaries, Decimal conversion, input validation, backup validation, and SwiftData CRUD/round trips.
 - macOS GitHub Actions tests, unsigned device build, standard Payload IPA packaging, downloadable artifacts, and automatic tagged releases.
 
-## Build status
+## Download and verified build status
 
-The authoring environment is Linux and has no Xcode or iOS SDK. **An iOS build, simulator test run, and IPA release have not been verified here.** See `VALIDATION.md` for checks actually performed. The Actions workflow must pass before treating the app as build-verified. No successful CI run or device installation is claimed.
+**[Download Subspace 1.0.0 from Releases](https://github.com/TrapNouz/Subvelle-Ios/releases/tag/v1.0.0)**. Choose `Subspace-1.0.0-3.ipa` and import it into SideStore on an iOS 26+ iPhone. A SHA-256 checksum is attached. This is a private repository: sign in with your authorized GitHub account to download it.
+
+The iOS app was compiled and tested successfully on GitHub’s macOS runner under Xcode 26.6. All **12 financial tests and four SwiftData tests passed**, followed by a successful unsigned ARM64 iPhone Release build. Both the [pull-request build](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567761519) and [merged-main build](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567908281) passed. The [publishing job](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43568662620) verified the IPA and attached it to the release.
+
+The released IPA comes from successful run `43567761519`, source revision `9aae990ba5b1190831286090921d44454213f0d7`. That revision and merged-main revision `7202ddc435e98ab96008ccb954e52fc44f03d802` have the exact same Git tree. GitHub Actions handled the asset upload using its built-in token; no personal signing secrets were added. See `VALIDATION.md` for the full report. Physical-device installation, visual review, and real notification delivery have not been manually verified.
 
 ## Build on GitHub from Windows
 
@@ -37,6 +41,10 @@ The authoring environment is Linux and has no Xcode or iOS SDK. **An iOS build, 
 6. Open/import the IPA with **SideStore** on an iOS 26+ iPhone. SideStore handles signing and sideloading using its own setup and account requirements. The IPA is deliberately unsigned; iOS cannot install it unsigned. This repository does not require an Apple ID, signing certificates, an Apple Developer membership, or App Store Connect secrets. GitHub’s built-in token grants release permission only to the release job.
 
 GitHub-hosted runner availability, repository Actions quotas, and runner image changes are controlled by GitHub. If a future runner lacks an iOS 26 simulator, install a matching runtime or adjust the simulator-selection step for a newer compatible runtime. Use the test-result artifact to diagnose CI failures. Failed tests prevent IPA publication.
+
+## Publish an existing verified build
+
+The additional **Actions → Publish verified SideStore IPA** workflow publishes an already-tested artifact without rebuilding. Enter a successful `build.yml` run ID and a tag matching the IPA's marketing version (for example `v1.0.0`). It validates the source run, version, bundle identifier, device platform, ARM64 executable, and ZIP integrity, then uploads the IPA and its SHA-256 checksum using GitHub’s built-in token. Future version-tag pushes still use the automatic build-and-release workflow described above.
 
 ## Local development on a Mac
 
