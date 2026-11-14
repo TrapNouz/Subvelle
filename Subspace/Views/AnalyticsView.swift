@@ -76,6 +76,9 @@ struct SpendingChart: View {
                 }
             }
             .chartXSelection(value: $selection)
+            .chartGesture { proxy in
+                SpatialTapGesture().onEnded { proxy.selectXValue(at: $0.location.x) }
+            }
             .chartXAxis {
                 AxisMarks(values: .stride(by: monthly ? .day : .month, count: monthly ? (typeSize.isAccessibilitySize ? 10 : 5) : (typeSize.isAccessibilitySize ? 3 : 1))) { _ in
                     AxisValueLabel(format: monthly ? .dateTime.day() : .dateTime.month(.narrow))
@@ -110,6 +113,7 @@ struct SpendingChart: View {
     private var summaryCaption: some View {
         Text(selectedBucket.map { $0.date.formatted(monthly ? .dateTime.month(.abbreviated).day() : .dateTime.month(.wide)) } ?? "Scheduled · \(store.currency)")
             .font(.caption).foregroundStyle(.secondary)
+            .accessibilityIdentifier(selectedBucket == nil ? "chartPeriodSummary" : "chartSelectionSummary")
     }
     private var periodPicker: some View {
         Picker("Chart period", selection: $monthly) { Text("Annual").tag(false); Text("Monthly").tag(true) }.accessibilityIdentifier("chartPeriod")
@@ -231,6 +235,9 @@ struct AnalyticsView: View {
                             .opacity(serviceSelection == nil || serviceSelection == record.id.uuidString ? 1 : 0.4)
                     }
                     .chartYSelection(value: $serviceSelection)
+                    .chartGesture { proxy in
+                        SpatialTapGesture().onEnded { proxy.selectYValue(at: $0.location.y) }
+                    }
                     .chartYAxis {
                         AxisMarks { value in
                             AxisValueLabel {

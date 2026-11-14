@@ -54,6 +54,7 @@ import SubspaceCore
                 let chart = element("spendingChart")
                 XCTAssertTrue(chart.exists)
                 chart.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5)).tap()
+                XCTAssertTrue(element("chartSelectionSummary").waitForExistence(timeout: 5), "A single tap must reveal a selected payment period")
                 capture("Analytics-Annual-Selection")
                 app.segmentedControls.buttons["Monthly"].tap()
                 capture("Analytics-Monthly")
