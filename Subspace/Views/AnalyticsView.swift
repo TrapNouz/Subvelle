@@ -104,7 +104,7 @@ struct AnalyticsView: View {
     @State private var selectedService: String?
     private var active: [SubscriptionRecord] { store.visible.filter { $0.status == .active && ($0.endDate.map { $0 >= Calendar.current.startOfDay(for: .now) } ?? true) } }
     private var categories: [BreakdownItem] {
-        Category.allCases.compactMap { category in
+        SubspaceCore.Category.allCases.compactMap { category in
             let amount = active.filter { $0.category == category }.reduce(Decimal.zero) { $0 + annual($1) }
             return amount > 0 ? BreakdownItem(name: category.rawValue, amount: amount) : nil
         }.sorted { $0.amount > $1.amount }

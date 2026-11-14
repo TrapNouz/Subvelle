@@ -5,7 +5,7 @@ struct SubscriptionsView: View {
     @Environment(AppStore.self) private var store
     @State private var search = ""
     @State private var filter = "All"
-    @State private var category: Category?
+    @State private var category: SubspaceCore.Category?
     @State private var selected: SubscriptionRecord?
     private var filtered: [SubscriptionRecord] {
         store.records.filter {
@@ -21,8 +21,8 @@ struct SubscriptionsView: View {
                 Section {
                     Picker("Status", selection: $filter) { ForEach(["All", "Active", "Paused", "Canceled", "Archived"], id: \.self) { Text($0).tag($0) } }
                     Picker("Category", selection: $category) {
-                        Text("All categories").tag(nil as Category?)
-                        ForEach(Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
+                        Text("All categories").tag(nil as SubspaceCore.Category?)
+                        ForEach(SubspaceCore.Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
                     }
                 }.listRowBackground(Color.primary.opacity(0.04))
                 Section("\(filtered.count) subscriptions") {
@@ -53,7 +53,7 @@ struct PresetPicker: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
-    @State private var category: Category?
+    @State private var category: SubspaceCore.Category?
     @State private var draft: SubscriptionRecord?
     private var presets: [ServicePreset] { ServicePreset.all.filter { (category == nil || $0.category == category) && (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)) } }
     var body: some View {
@@ -62,8 +62,8 @@ struct PresetPicker: View {
                 Section {
                     Button { create(nil) } label: { Label("Create custom subscription", systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
                     Picker("Category", selection: $category) {
-                        Text("All categories").tag(nil as Category?)
-                        ForEach(Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
+                        Text("All categories").tag(nil as SubspaceCore.Category?)
+                        ForEach(SubspaceCore.Category.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
                     }
                 }
                 Section {
@@ -111,7 +111,7 @@ struct SubscriptionEditor: View {
                 Section("Service") {
                     TextField("Service name", text: $record.name).textContentType(.organizationName)
                     Picker("Icon", selection: $record.symbol) { ForEach(symbols, id: \.self) { Image(systemName: $0).tag($0) } }
-                    Picker("Category", selection: $record.category) { ForEach(Category.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) } }
+                    Picker("Category", selection: $record.category) { ForEach(SubspaceCore.Category.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) } }
                 }
                 Section {
                     TextField("Payment amount", text: $amountText).keyboardType(.decimalPad)
