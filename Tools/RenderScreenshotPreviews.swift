@@ -8,7 +8,7 @@ guard let enumeration = manager.enumerator(at: folder, includingPropertiesForKey
 }
 let all = enumeration.compactMap { $0 as? URL }
 var names: [String: String] = [:]
-@MainActor func collect(_ object: Any) {
+func collect(_ object: Any) {
     if let map = object as? [String: Any] {
         let filename = (map["exportedFileName"] ?? map["fileName"] ?? map["filename"]) as? String
         let title = (map["suggestedHumanReadableName"] ?? map["name"]) as? String
@@ -26,7 +26,7 @@ let own = pngs.filter { url in prefixes.contains { (names[url.lastPathComponent]
 let selected = pngs.sorted {
     (names[$0.lastPathComponent] ?? $0.lastPathComponent) < (names[$1.lastPathComponent] ?? $1.lastPathComponent)
 }
-@MainActor func nameForReview(_ url: URL) -> String { names[url.lastPathComponent] ?? url.lastPathComponent }
+func nameForReview(_ url: URL) -> String { names[url.lastPathComponent] ?? url.lastPathComponent }
 let output = folder.appendingPathComponent("Previews", isDirectory: true)
 try manager.createDirectory(at: output, withIntermediateDirectories: true)
 print("Screenshot previews: \(selected.count) images, \(names.count) attachment names")
@@ -49,9 +49,12 @@ for page in stride(from: 0, to: selected.count, by: 8) {
     for (index, url) in chunk.enumerated() {
         guard let image = NSImage(contentsOf: url), image.size.width > 0, image.size.height > 0 else { continue }
         let x = CGFloat(index % 4 * cellWidth)
-        if let bitmap = NSBitmapImageRep(contentsOf: url) {
-            print("SCREENSHOT_SIZE \(nameForReview(url)): \(bitmap.pixelsWide)x\(bitmap.pixelsHigh)")
-        }
+        do {
+            let bytes = try Data(contentsOf: url)
+            if let bitmap = NSBitmapImageRep(data: bytes) {
+                print("SCREENSHOT_SIZE \(nameForReview(url)): \(bitmap.pixelsWide)x\(bitmap.pixelsHigh)")
+            }
+        } catch { print("Screenshot metadata unavailable: \(error)") }
         let top = CGFloat(height - index / 4 * cellHeight)
         let name = names[url.lastPathComponent] ?? url.lastPathComponent
         (name as NSString).draw(in: NSRect(x: x + 6, y: top - 42, width: 308, height: 36), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.white])

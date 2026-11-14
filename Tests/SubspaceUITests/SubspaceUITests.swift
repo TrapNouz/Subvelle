@@ -166,23 +166,31 @@ import SubspaceCore
             settings.swipeUp()
         }
         XCTAssertTrue(control.exists && control.isHittable, "Accessibility setting missing: \(label)")
-        let isOn = (control.value as? String) == "1"
-        if isOn != enabled {
-            // Settings exposes the whole row as a switch; tap its trailing toggle.
-            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0))
-                .withOffset(CGVector(dx: 0, dy: min(22, control.frame.height / 2))).tap()
-        }
         let expected = enabled ? "1" : "0"
-        let updated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected), object: control)
-        let result = XCTWaiter.wait(for: [updated], timeout: 5)
-        if result != .completed {
+        func isExpected() -> Bool {
+            if let value = control.value as? NSNumber { return value.boolValue == enabled }
+            return (control.value as? String) == expected
+        }
+        let candidates = control.switches.allElementsBoundByIndex
+        if !isExpected(), let nested = candidates.first(where: { $0.isHittable }) { nested.tap() }
+        // Settings sometimes exposes a row instead of the nested toggle. Verify each
+        // real touch before trying another position; never blindly double-toggle.
+        for x in [0.98, 0.9, 0.8, 0.5] {
+            if isExpected() { break }
+            control.coordinate(withNormalizedOffset: CGVector(dx: x, dy: 0.5)).tap()
+            let expectedValue = NSPredicate(format: "value == %@ OR value == %@", expected, NSNumber(value: enabled))
+            let updated = XCTNSPredicateExpectation(predicate: expectedValue, object: control)
+            if XCTWaiter.wait(for: [updated], timeout: 2) == .completed { break }
+        }
+        if !isExpected() {
             let diagnostic = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             diagnostic.name = "Accessibility-setting-" + label
             diagnostic.lifetime = .keepAlways
             add(diagnostic)
-            print("Switch frame: \(control.frame), value: \(String(describing: control.value))")
+            print(control.debugDescription)
+            print(settings.debugDescription)
         }
-        XCTAssertEqual(result, .completed, "Accessibility setting did not change: \(label)")
+        XCTAssertTrue(isExpected(), "Accessibility setting did not change: \(label)")
         settings.terminate()
     }
     private func capture(_ name: String) {
