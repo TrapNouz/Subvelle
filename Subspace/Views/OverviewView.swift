@@ -4,6 +4,7 @@ import SubspaceCore
 struct OverviewView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selected: SubscriptionRecord?
     private var largest: [SubscriptionRecord] {
         store.visible.filter { $0.status == .active && ($0.endDate.map { $0 >= Calendar.current.startOfDay(for: .now) } ?? true) && store.converted($0) != nil }
@@ -87,7 +88,7 @@ struct OverviewView: View {
                     .accessibilityIdentifier("monthlyAverage")
                 Text("Your recurring commitment, averaged over the year.").font(.caption).foregroundStyle(.secondary)
                 Divider()
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), alignment: .leading)], alignment: .leading, spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 130), alignment: .leading)], alignment: .leading, spacing: 16) {
                     metric("Annual average", value: store.money(store.summary.annual))
                     metric("Weekly equivalent", value: store.money(store.summary.weekly))
                     metric("Active plans", value: String(store.summary.activeCount))

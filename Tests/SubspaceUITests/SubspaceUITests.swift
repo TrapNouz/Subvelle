@@ -83,7 +83,9 @@ import SubspaceCore
     func testLandscapeSafeAreas() throws {
         try launch(populated: true)
         XCUIDevice.shared.orientation = .landscapeLeft
-        open("Overview"); assertNavigation(); capture("Landscape-Overview")
+        open("Overview")
+        XCTAssertGreaterThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height, "The app must actually enter landscape")
+        assertNavigation(); capture("Landscape-Overview")
         revealAboveTabBar("overviewBottom"); capture("Landscape-Overview-Bottom")
         open("Settings"); assertNavigation(); capture("Landscape-Settings")
         revealAboveTabBar("settingsBottom"); capture("Landscape-Settings-Bottom")
@@ -167,14 +169,23 @@ import SubspaceCore
         let isOn = (control.value as? String) == "1"
         if isOn != enabled {
             // Settings exposes the whole row as a switch; tap its trailing toggle.
-            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0))
+                .withOffset(CGVector(dx: 0, dy: min(22, control.frame.height / 2))).tap()
         }
         let expected = enabled ? "1" : "0"
         let updated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected), object: control)
-        XCTAssertEqual(XCTWaiter.wait(for: [updated], timeout: 5), .completed, "Accessibility setting did not change: \(label)")
+        let result = XCTWaiter.wait(for: [updated], timeout: 5)
+        if result != .completed {
+            let diagnostic = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            diagnostic.name = "Accessibility-setting-" + label
+            diagnostic.lifetime = .keepAlways
+            add(diagnostic)
+            print("Switch frame: \(control.frame), value: \(String(describing: control.value))")
+        }
+        XCTAssertEqual(result, .completed, "Accessibility setting did not change: \(label)")
         settings.terminate()
     }
     private func capture(_ name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 }
