@@ -5,8 +5,16 @@ import SubspaceCore
 
 extension Color {
     static let spaceBackground = Color(red: 0.045, green: 0.045, blue: 0.055)
-    static let spaceAccent = Color(red: 0.64, green: 0.55, blue: 1)
-    static let spaceBlue = Color(red: 0.35, green: 0.65, blue: 1)
+    static let spaceAccent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.69, green: 0.60, blue: 1, alpha: 1)
+            : UIColor(red: 0.36, green: 0.23, blue: 0.72, alpha: 1)
+    })
+    static let spaceBlue = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.35, green: 0.65, blue: 1, alpha: 1)
+            : UIColor(red: 0.14, green: 0.37, blue: 0.70, alpha: 1)
+    })
 }
 struct SpaceBackground: View {
     @Environment(\.colorScheme) private var scheme
@@ -28,9 +36,11 @@ struct ServiceIcon: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 13).fill(Color.spaceAccent.opacity(0.14))
-            if initials.isEmpty {
+            VStack(spacing: 2) {
                 Image(systemName: UIImage(systemName: record.symbol) == nil ? "creditcard.fill" : record.symbol)
-            } else { Text(initials).font(.subheadline.bold()) }
+                    .font(.system(size: 17, weight: .medium))
+                if !initials.isEmpty { Text(initials).font(.system(size: 9, weight: .bold)) }
+            }
         }.foregroundStyle(Color.spaceAccent).frame(width: 44, height: 44).accessibilityHidden(true)
     }
 }

@@ -74,12 +74,16 @@ jobs:
           for device in json.load(open('SimulatorMatrix.json')):
               print(str(device['major']) + '\t' + device['udid'])
           PYCODE
+          first_identifier=$(head -n 1 "$RUNNER_TEMP/simulators.tsv" | cut -f 2)
+          xcodebuild build-for-testing -project Subspace.xcodeproj -scheme Subspace \
+            -destination "platform=iOS Simulator,id=$first_identifier" \
+            -derivedDataPath TestBuild CODE_SIGNING_ALLOWED=NO
           while IFS=$'\t' read -r major identifier; do
             xcrun simctl boot "$identifier"
             xcrun simctl bootstatus "$identifier" -b
             xcrun simctl status_bar "$identifier" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
-            xcodebuild test -project Subspace.xcodeproj -scheme Subspace \
-              -destination "platform=iOS Simulator,id=$identifier" \
+            xcodebuild test-without-building -project Subspace.xcodeproj -scheme Subspace \
+              -destination "platform=iOS Simulator,id=$identifier" -derivedDataPath TestBuild \
               -parallel-testing-enabled NO -resultBundlePath "TestResults-iOS$major.xcresult" \
               CODE_SIGNING_ALLOWED=NO
             xcrun simctl shutdown "$identifier"

@@ -98,8 +98,17 @@ import SubspaceCore
             let start = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: .now), month: 1, day: 1)) ?? .now
             let intervals: [BillingInterval] = [.weekly, .monthly, .annual, .quarterly, .biweekly, .semiannual, .init(count: 10, unit: .day)]
             let currencies = ["CAD", "USD", "EUR"]
-            let records = (0..<14).map { index in
-                SubscriptionRecord(name: String(format: "Plan %02d", index + 1), amount: Decimal((index + 1) * 3), currency: currencies[index % currencies.count], interval: intervals[index % intervals.count], startDate: start, nextRenewal: Date.now.addingTimeInterval(Double(index + 1) * 86400), category: SubspaceCore.Category.allCases[index % SubspaceCore.Category.allCases.count], reminderDays: nil)
+            var records: [SubscriptionRecord] = []
+            for index in 0..<14 {
+                let name = String(format: "Plan %02d", index + 1)
+                let amount = Decimal((index + 1) * 3)
+                let currency = currencies[index % currencies.count]
+                let interval = intervals[index % intervals.count]
+                let renewal = Date.now.addingTimeInterval(Double(index + 1) * 86400)
+                let categories = SubspaceCore.Category.allCases
+                let category = categories[index % categories.count]
+                let record = SubscriptionRecord(name: name, amount: amount, currency: currency, interval: interval, startDate: start, nextRenewal: renewal, category: category, reminderDays: nil)
+                records.append(record)
             }
             app.launchEnvironment["SUBSPACE_UI_TEST_BACKUP"] = String(decoding: try JSONEncoder().encode(Backup(subscriptions: records)), as: UTF8.self)
         }
@@ -133,6 +142,13 @@ import SubspaceCore
     private func setAccessibilitySwitch(path: [String], label: String, enabled: Bool) {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settings.terminate(); settings.launch()
+        // Settings may restore its previous pane after a cold launch.
+        for _ in 0..<6 {
+            if settings.navigationBars["Settings"].exists { break }
+            let back = settings.navigationBars.buttons.firstMatch
+            if !back.exists || !back.isHittable { break }
+            back.tap()
+        }
         for title in path {
             let target = settings.staticTexts[title].firstMatch
             for _ in 0..<10 {
