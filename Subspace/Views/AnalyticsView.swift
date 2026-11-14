@@ -48,10 +48,10 @@ struct SpendingChart: View {
                     Button { shift(1) } label: { Image(systemName: "chevron.right") }.buttonStyle(.glass).accessibilityLabel("Next period").disabled(year >= 2200)
                 }
             }
-            HStack(alignment: .firstTextBaseline) {
-                Text(store.money(selectedBucket?.total ?? buckets.reduce(0) { $0 + $1.total })).font(.title2.bold()).contentTransition(reduceMotion ? .identity : .numericText()).fixedSize(horizontal: false, vertical: true)
-                Spacer()
-                Text(selectedBucket.map { $0.date.formatted(monthly ? .dateTime.month(.abbreviated).day() : .dateTime.month(.wide)) } ?? "Scheduled · \(store.currency)").font(.caption).foregroundStyle(.secondary)
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) { summaryValue; summaryCaption }
+            } else {
+                HStack(alignment: .firstTextBaseline) { summaryValue; Spacer(); summaryCaption }
             }
             Chart {
                 ForEach(buckets) { bucket in
@@ -77,7 +77,7 @@ struct SpendingChart: View {
             }
             .chartXSelection(value: $selection)
             .chartXAxis {
-                AxisMarks(values: .stride(by: monthly ? .day : .month, count: monthly ? 5 : 1)) { _ in
+                AxisMarks(values: .stride(by: monthly ? .day : .month, count: monthly ? (typeSize.isAccessibilitySize ? 10 : 5) : (typeSize.isAccessibilitySize ? 3 : 1))) { _ in
                     AxisValueLabel(format: monthly ? .dateTime.day() : .dateTime.month(.narrow))
                 }
             }
@@ -102,6 +102,15 @@ struct SpendingChart: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: month)
         .onChange(of: monthly) { selection = nil }
     }
+    private var summaryValue: some View {
+        Text(store.money(selectedBucket?.total ?? buckets.reduce(0) { $0 + $1.total }))
+            .font(.title2.bold()).contentTransition(reduceMotion ? .identity : .numericText())
+            .fixedSize(horizontal: false, vertical: true)
+    }
+    private var summaryCaption: some View {
+        Text(selectedBucket.map { $0.date.formatted(monthly ? .dateTime.month(.abbreviated).day() : .dateTime.month(.wide)) } ?? "Scheduled · \(store.currency)")
+            .font(.caption).foregroundStyle(.secondary)
+    }
     private var periodPicker: some View {
         Picker("Chart period", selection: $monthly) { Text("Annual").tag(false); Text("Monthly").tag(true) }.accessibilityIdentifier("chartPeriod")
     }
@@ -124,6 +133,7 @@ struct BreakdownItem: Identifiable {
 struct AnalyticsView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .body) private var donutHeight = 230.0
     @ScaledMetric(relativeTo: .body) private var serviceRowHeight = 36.0
     @State private var calendarOpen = false
@@ -198,7 +208,7 @@ struct AnalyticsView: View {
                             .cornerRadius(4).foregroundStyle(by: .value("Category", item.name))
                             .opacity(selectedCategory == nil || selectedCategory?.id == item.id ? 1 : 0.4)
                             .accessibilityLabel(item.name).accessibilityValue(store.money(item.amount))
-                    }.chartAngleSelection(value: $selectedAngle).chartLegend(.hidden).frame(height: donutHeight)
+                    }.chartAngleSelection(value: $selectedAngle).chartLegend(.hidden).frame(height: min(donutHeight, 300))
                         .accessibilityIdentifier("categoryChart")
                     if let item = selectedCategory { Text("\(item.name) · \(store.money(item.amount)) / year").font(.subheadline.weight(.semibold)) }
                     ForEach(categories) { item in
@@ -228,7 +238,7 @@ struct AnalyticsView: View {
                             }
                         }
                     }
-                    .chartXAxis { AxisMarks { value in AxisValueLabel { if let amount = value.as(Double.self) { Text(amount, format: .number.notation(.compactName)) } } } }
+                    .chartXAxis { AxisMarks(values: .automatic(desiredCount: typeSize.isAccessibilitySize ? 2 : 4)) { value in AxisValueLabel { if let amount = value.as(Double.self) { Text(amount, format: .number.notation(.compactName)) } } } }
                     .chartXAxisLabel(store.currency)
                     .frame(height: serviceRowHeight * Double(min(rows.count, 6)) + 35)
                     .accessibilityIdentifier("serviceChart")

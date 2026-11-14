@@ -165,8 +165,13 @@ import SubspaceCore
         }
         XCTAssertTrue(control.exists && control.isHittable, "Accessibility setting missing: \(label)")
         let isOn = (control.value as? String) == "1"
-        if isOn != enabled { control.tap() }
-        XCTAssertEqual(control.value as? String, enabled ? "1" : "0")
+        if isOn != enabled {
+            // Settings exposes the whole row as a switch; tap its trailing toggle.
+            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        }
+        let expected = enabled ? "1" : "0"
+        let updated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected), object: control)
+        XCTAssertEqual(XCTWaiter.wait(for: [updated], timeout: 5), .completed, "Accessibility setting did not change: \(label)")
         settings.terminate()
     }
     private func capture(_ name: String) {

@@ -98,6 +98,10 @@ jobs:
               xcrun xcresulttool export attachments --path "$result" --output-path "Screenshots/$name"
             fi
           done
+      - name: Render screenshot review contact sheets
+        if: always()
+        run: |
+          swift Tools/RenderScreenshotPreviews.swift Screenshots
       - name: Upload simulator screenshots and SDK inventory
         if: always()
         uses: actions/upload-artifact@v4
