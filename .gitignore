@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.swiftpm/
+build/
+staging/
+*.ipa
+*.xcresult/
+Subspace.xcodeproj/
+xcuserdata/
+*.xcuserstate

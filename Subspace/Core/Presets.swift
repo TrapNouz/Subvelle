@@ -1,0 +1,26 @@
+import Foundation
+public struct ServicePreset: Identifiable, Sendable {
+    public var id: String { name }
+    public let name: String
+    public let category: Category
+    public var symbol: String { category.symbol }
+    public var initials: String { String(name.split(separator: " ").prefix(2).compactMap(\.first)) }
+    public static let all: [Self] = {
+        let groups: [(Category, [String])] = [
+            (.streaming, ["Netflix", "Disney+", "YouTube Premium", "Apple TV", "Prime Video", "Hulu", "HBO Max", "Peacock", "Paramount+", "Crunchyroll", "MUBI", "BritBox", "Shudder", "Discovery+", "Criterion Channel", "Fubo", "DAZN"]),
+            (.music, ["Spotify", "Apple Music", "Tidal", "YouTube Music", "Deezer", "Amazon Music", "SoundCloud Go", "Qobuz", "Pandora"]),
+            (.ai, ["ChatGPT", "Claude", "Gemini", "Perplexity", "Cursor", "Midjourney", "GitHub Copilot", "Runway", "ElevenLabs", "Poe"]),
+            (.gaming, ["Xbox Game Pass", "PlayStation Plus", "Nintendo Switch Online", "Roblox Premium", "EA Play", "Ubisoft+", "GeForce NOW", "Apple Arcade", "Humble Choice", "Final Fantasy XIV", "World of Warcraft"]),
+            (.privacy, ["Mullvad", "Proton", "NordVPN", "Surfshark", "1Password", "Bitwarden", "addy.io", "ExpressVPN", "IVPN", "SimpleLogin", "Dashlane"]),
+            (.productivity, ["Microsoft 365", "Notion", "Adobe Creative Cloud", "Todoist", "Evernote", "Slack", "Zoom", "Canva", "Fantastical", "Things Cloud", "Grammarly", "Obsidian Sync", "Readwise", "Superhuman"]),
+            (.cloud, ["iCloud+", "Google One", "Dropbox", "Box", "OneDrive", "Backblaze", "pCloud", "MEGA", "Sync.com"]),
+            (.fitness, ["Apple Fitness+", "Strava", "Peloton", "Fitbod", "Headspace", "Calm", "MyFitnessPal", "Whoop", "Oura", "Nike Training", "ClassPass"]),
+            (.education, ["Duolingo", "Coursera", "Skillshare", "MasterClass", "Brilliant", "LinkedIn Learning", "Codecademy", "Babbel", "DataCamp", "Blinkist"]),
+            (.news, ["The New York Times", "The Washington Post", "The Economist", "The Guardian", "Financial Times", "The Wall Street Journal", "The Atlantic", "The New Yorker", "Apple News+", "The Globe and Mail"]),
+            (.hosting, ["Squarespace", "Wix", "Webflow", "WordPress.com", "Ghost", "Shopify", "DigitalOcean", "Linode", "Hetzner", "Cloudflare", "Vercel", "Netlify"]),
+            (.developer, ["GitHub", "GitLab", "JetBrains", "Tower", "Postman", "Sentry", "Linear", "Figma", "Sketch", "Docker", "Expo", "Raycast", "Setapp"]),
+            (.other, ["Audible", "Kindle Unlimited", "Patreon", "Substack", "Amazon Prime", "Costco", "Instacart+", "Uber One", "DoorDash DashPass", "NYT Games"])
+        ]
+        return groups.flatMap { category, names in names.map { Self(name: $0, category: category) } }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }()
+}
