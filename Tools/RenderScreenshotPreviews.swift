@@ -20,10 +20,8 @@ for url in all where url.pathExtension == "json" {
     do { collect(try JSONSerialization.jsonObject(with: Data(contentsOf: url))) }
     catch { print("Could not read attachment metadata: \(url.lastPathComponent): \(error)") }
 }
-let prefixes = ["Empty-", "Populated-", "Accessibility-Light-", "Landscape-", "Analytics-", "Added-", "Add-"]
-let pngs = all.filter { $0.pathExtension.lowercased() == "png" && !$0.path.contains("/Previews/") }
-let own = pngs.filter { url in prefixes.contains { (names[url.lastPathComponent] ?? url.lastPathComponent).hasPrefix($0) } }
-let selected = pngs.sorted {
+let screenshots = all.filter { ["png", "jpg", "jpeg"].contains($0.pathExtension.lowercased()) && !$0.path.contains("/Previews/") }
+let selected = screenshots.sorted {
     (names[$0.lastPathComponent] ?? $0.lastPathComponent) < (names[$1.lastPathComponent] ?? $1.lastPathComponent)
 }
 func nameForReview(_ url: URL) -> String { names[url.lastPathComponent] ?? url.lastPathComponent }
@@ -66,7 +64,10 @@ for page in stride(from: 0, to: selected.count, by: 8) {
     guard let data = bitmap.representation(using: .png, properties: [:]) else { throw NSError(domain: "SubspaceReview", code: 3) }
     let number = page / 8
     try data.write(to: output.appendingPathComponent("Review-\(number).png"))
-    let base64 = data.base64EncodedString()
+    // Full-resolution attachments and PNG contact sheets remain in the artifact.
+    // JPEG log previews keep visual review within the connector's log size limit.
+    guard let preview = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.55]) else { throw NSError(domain: "SubspaceReview", code: 4) }
+    let base64 = preview.base64EncodedString()
     var offset = base64.startIndex
     var sequence = 0
     while offset < base64.endIndex {

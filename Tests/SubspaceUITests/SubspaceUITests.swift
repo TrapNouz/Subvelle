@@ -135,11 +135,19 @@ import SubspaceCore
             if item.exists && item.isHittable && item.frame.maxY <= app.tabBars.firstMatch.frame.minY + 2 { break }
             swipeUp()
         }
+        if !item.exists || !item.isHittable {
+            capture("Unreachable-" + id)
+            print(app.debugDescription)
+        }
         XCTAssertTrue(item.exists && item.isHittable, "Bottom content must remain reachable: \(id)")
         XCTAssertLessThanOrEqual(item.frame.maxY, app.tabBars.firstMatch.frame.minY + 2, "Bottom content overlaps navigation: \(id)")
     }
     private func swipeUp() {
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.75)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.25)))
+        // Use the native scrolling container rather than dragging at the screen's
+        // trailing edge, which can grab the scroll indicator at accessibility sizes.
+        let list = app.collectionViews.firstMatch
+        if list.exists && list.isHittable { list.swipeUp(velocity: .fast) }
+        else { app.swipeUp(velocity: .fast) }
     }
     private func setAccessibilitySwitch(path: [String], label: String, enabled: Bool) {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")

@@ -212,7 +212,7 @@ struct AnalyticsView: View {
                         .accessibilityIdentifier("categoryChart")
                     if let item = selectedCategory { Text("\(item.name) · \(store.money(item.amount)) / year").font(.subheadline.weight(.semibold)) }
                     ForEach(categories) { item in
-                        LabeledContent(item.name, value: store.money(item.amount)).font(.subheadline)
+                        breakdownAmount(item)
                     }
                 }
             }
@@ -266,12 +266,22 @@ struct AnalyticsView: View {
             VStack(spacing: 18) {
                 ForEach(currencies) { item in
                     VStack(alignment: .leading, spacing: 8) {
-                        LabeledContent(item.name, value: store.money(item.amount)).font(.subheadline)
+                        breakdownAmount(item)
                         ProgressView(value: item.value, total: max(currencies.reduce(0) { $0 + $1.value }, 1)).tint(.spaceBlue)
                     }
                 }
                 if currencies.isEmpty { Text("Exchange rates are needed for this breakdown.").foregroundStyle(.secondary) }
             }
+        }
+    }
+    @ViewBuilder private func breakdownAmount(_ item: BreakdownItem) -> some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name).foregroundStyle(.secondary)
+                Text(store.money(item.amount)).fontWeight(.semibold)
+            }.font(.subheadline).frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            LabeledContent(item.name, value: store.money(item.amount)).font(.subheadline)
         }
     }
     private func annual(_ record: SubscriptionRecord) -> Decimal { (store.converted(record) ?? 0) * record.interval.periodsPerYear }
