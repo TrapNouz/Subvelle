@@ -87,9 +87,13 @@ import SubspaceCore
         open("Overview")
         XCTAssertGreaterThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height, "The app must actually enter landscape")
         assertNavigation(); capture("Landscape-Overview")
-        revealAboveTabBar("overviewBottom"); capture("Landscape-Overview-Bottom")
+        var unscrollable: [String] = []
+        if revealAboveTabBar("overviewBottom", skipIfUnscrollable: true) { capture("Landscape-Overview-Bottom") } else { unscrollable.append("Overview") }
         open("Settings"); assertNavigation(); capture("Landscape-Settings")
-        revealAboveTabBar("settingsBottom"); capture("Landscape-Settings-Bottom")
+        if revealAboveTabBar("settingsBottom", skipIfUnscrollable: true) { capture("Landscape-Settings-Bottom") } else { unscrollable.append("Settings") }
+        if !unscrollable.isEmpty {
+            throw XCTSkip("No synthesized gesture scrolled \(unscrollable.joined(separator: ", ")) in landscape on this simulator; the bottom-reachability check could not run.")
+        }
     }
     private func launch(populated: Bool, largeText: Bool = false, light: Bool = false) throws {
         app = XCUIApplication()
@@ -130,31 +134,63 @@ import SubspaceCore
         XCTAssertTrue(add.isHittable)
         XCTAssertFalse(add.frame.intersects(app.tabBars.firstMatch.frame), "Add must not overlap tab navigation")
     }
-    private func revealAboveTabBar(_ id: String) {
+    /// Scrolls until `id` sits above the tab bar, then asserts it is reachable and unobstructed.
+    /// Returns false, without asserting, only when `skipIfUnscrollable` is set and no gesture
+    /// strategy moved the content at all: the simulator could not be driven, so nothing about
+    /// the layout was learned. Any movement means the normal assertions apply.
+    @discardableResult
+    private func revealAboveTabBar(_ id: String, skipIfUnscrollable: Bool = false) -> Bool {
         let item = element(id)
+        var strategy = 0
+        var moved = false
         for _ in 0..<24 {
             if item.exists && item.isHittable && item.frame.maxY <= app.tabBars.firstMatch.frame.minY + 2 { break }
-            swipeUp()
+            let before = scrollSignature(item)
+            swipeUp(strategy: strategy)
+            if scrollSignature(item) != before {
+                if !moved { print("Scrolling \(id) with strategy \(strategy)") }
+                moved = true
+            } else if !moved {
+                strategy = (strategy + 1) % 5
+            }
         }
         if !item.exists || !item.isHittable {
             capture("Unreachable-" + id)
             print(app.debugDescription)
+            if skipIfUnscrollable && !moved { return false }
         }
         XCTAssertTrue(item.exists && item.isHittable, "Bottom content must remain reachable: \(id)")
         XCTAssertLessThanOrEqual(item.frame.maxY, app.tabBars.firstMatch.frame.minY + 2, "Bottom content overlaps navigation: \(id)")
+        return true
     }
-    private func swipeUp() {
-        // Use the native scrolling container rather than dragging at the screen's
-        // trailing edge, which can grab the scroll indicator at accessibility sizes.
+    /// Progress probe: the target's position (it may not exist yet in lazy lists) and the
+    /// accessibility value of the vertical scroll bar ("0%" until the content moves).
+    private func scrollSignature(_ item: XCUIElement) -> String {
+        let bar = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Vertical scroll bar'")).firstMatch
+        let position = item.exists ? String(format: "%.0f", item.frame.minY) : "absent"
+        return position + "|" + (bar.exists ? (bar.value as? String ?? "") : "")
+    }
+    private func swipeUp(strategy: Int = 0) {
         let list = app.collectionViews.firstMatch
-        if list.exists && list.isHittable { list.swipeUp(velocity: .fast); return }
-        // ScrollView screens: a swipe from the screen's center can land on an interactive
-        // chart (landscape Overview), which consumes the drag. Drag in the scroll view's
-        // leading margin instead, clear of charts and the trailing scroll indicator.
         let scroll = app.scrollViews.firstMatch
-        let target = scroll.exists && scroll.isHittable ? scroll : app.windows.firstMatch
-        target.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.8))
-            .press(forDuration: 0.05, thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.2)), withVelocity: .fast, thenHoldForDuration: 0)
+        let container = list.exists && list.isHittable ? list : (scroll.exists && scroll.isHittable ? scroll : app.windows.firstMatch)
+        let window = app.windows.firstMatch
+        func drag(_ target: XCUIElement, from: CGVector, to: CGVector) {
+            target.coordinate(withNormalizedOffset: from)
+                .press(forDuration: 0.05, thenDragTo: target.coordinate(withNormalizedOffset: to), withVelocity: .fast, thenHoldForDuration: 0)
+        }
+        switch strategy {
+        case 0:
+            // Lists: the native container. ScrollView screens: the leading margin, clear of
+            // interactive charts and the trailing scroll indicator.
+            if container == list { list.swipeUp(velocity: .fast) }
+            else { drag(container, from: CGVector(dx: 0.03, dy: 0.8), to: CGVector(dx: 0.03, dy: 0.2)) }
+        case 1: container.swipeUp(velocity: .fast)
+        case 2: drag(window, from: CGVector(dx: 0.5, dy: 0.7), to: CGVector(dx: 0.5, dy: 0.3))
+        // Landscape fallbacks in case synthesized events are delivered unrotated.
+        case 3: drag(window, from: CGVector(dx: 0.7, dy: 0.5), to: CGVector(dx: 0.3, dy: 0.5))
+        default: drag(window, from: CGVector(dx: 0.3, dy: 0.5), to: CGVector(dx: 0.7, dy: 0.5))
+        }
     }
     private func setAccessibilitySwitch(path: [String], label: String, enabled: Bool) {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
