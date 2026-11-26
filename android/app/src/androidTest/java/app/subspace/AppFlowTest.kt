@@ -77,6 +77,44 @@ class AppFlowTest {
 
     /** 300 plans across currencies and intervals: every tab must render and scroll to its end. */
     @Test fun largeDataSetScrollsEveryTab() {
+        seedLargeDataSet()
+        launch(readyTag = "overviewList")
+        compose.onNodeWithTag("overviewList").performScrollToNode(hasTestTag("overviewBottom"))
+        compose.onNodeWithTag("tab-subscriptions").performClick()
+        compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasText("Plan 300", substring = true))
+        compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasTestTag("subscriptionsBottom"))
+        compose.onNodeWithTag("tab-analytics").performClick()
+        compose.onNodeWithTag("analyticsList").performScrollToNode(hasTestTag("analyticsBottom"))
+        compose.onNodeWithTag("analyticsBottom").performClick()
+        compose.onNodeWithTag("paymentCalendar").assertIsDisplayed()
+    }
+
+    /**
+     * Smoothness: real finger swipes through Android's input system (not test-clock jumps) over 300
+     * plans on each tab, then the renderer's own frame statistics. CI prints them. Run against the
+     * non-debuggable "benchmark" build; debuggable builds are much slower by design.
+     */
+    @Test fun swipeScrollingFrameStatistics() {
+        seedLargeDataSet()
+        launch(readyTag = "overviewList")
+        val metrics = context.resources.displayMetrics
+        val x = metrics.widthPixels / 2
+        val (low, high) = (metrics.heightPixels * 0.72).toInt() to (metrics.heightPixels * 0.30).toInt()
+        fun swipes() {
+            repeat(12) { shell("input swipe $x $low $x $high 180"); Thread.sleep(350) }
+            repeat(12) { shell("input swipe $x $high $x $low 180"); Thread.sleep(350) }
+        }
+        Thread.sleep(1_000)
+        shell("dumpsys gfxinfo ${context.packageName} reset")
+        swipes()
+        compose.onNodeWithTag("tab-subscriptions").performClick(); Thread.sleep(800); swipes()
+        compose.onNodeWithTag("tab-analytics").performClick(); Thread.sleep(800); swipes()
+        val stats = shell("dumpsys gfxinfo ${context.packageName}").lines()
+            .filter { line -> listOf("Total frames rendered", "Janky frames", "50th percentile", "90th percentile", "95th percentile", "99th percentile", "Number Slow UI thread", "Number Frame deadline missed").any { line.trim().startsWith(it) } }
+        stats.forEach { android.util.Log.i("SubspaceFrames", it.trim()) }
+    }
+
+    private fun seedLargeDataSet() {
         val zone = ZoneId.systemDefault()
         val start = LocalDate.now().withDayOfYear(1)
         val intervals = listOf(BillingInterval.WEEKLY, BillingInterval.MONTHLY, BillingInterval.ANNUAL, BillingInterval.QUARTERLY, BillingInterval(10, BillingUnit.DAY))
@@ -87,19 +125,5 @@ class AppFlowTest {
                 category = Category.entries[i % Category.entries.size], reminderDays = 3)
         }
         SubscriptionStore(context).save(records)
-        launch(readyTag = "overviewList")
-        // Frame statistics for the scrolling below (reported by Android's renderer; printed by CI).
-        shell("dumpsys gfxinfo ${context.packageName} reset")
-        compose.onNodeWithTag("overviewList").performScrollToNode(hasTestTag("overviewBottom"))
-        compose.onNodeWithTag("tab-subscriptions").performClick()
-        compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasText("Plan 300", substring = true))
-        compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasTestTag("subscriptionsBottom"))
-        compose.onNodeWithTag("tab-analytics").performClick()
-        compose.onNodeWithTag("analyticsList").performScrollToNode(hasTestTag("analyticsBottom"))
-        compose.onNodeWithTag("analyticsBottom").performClick()
-        compose.onNodeWithTag("paymentCalendar").assertIsDisplayed()
-        val stats = shell("dumpsys gfxinfo ${context.packageName}").lines()
-            .filter { line -> listOf("Total frames rendered", "Janky frames", "50th percentile", "90th percentile", "95th percentile", "99th percentile", "Number Slow UI thread", "Number Frame deadline missed").any { line.trim().startsWith(it) } }
-        stats.forEach { android.util.Log.i("SubspaceFrames", it.trim()) }
     }
 }

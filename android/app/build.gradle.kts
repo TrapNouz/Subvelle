@@ -43,7 +43,19 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystoreFile != null) signingConfig = signingConfigs.getByName("release")
         }
+        // For measuring smoothness in CI: release settings (not debuggable, so ART fully optimizes and
+        // baseline profiles apply) without R8, which UI-test tooling cannot run against. Debug-signed.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
+    // CI runs UI tests against "benchmark" (-PtestBuildType=benchmark); local runs default to debug.
+    testBuildType = (findProperty("testBuildType") as String?) ?: "debug"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
