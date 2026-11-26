@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Adaptive icons must stay in mipmap-anydpi-v26: aapt2 does not resolve them from mipmap-anydpi. -->
+    <issue id="ObsoleteSdkInt" severity="ignore" />
+    <!-- Library versions are pinned deliberately and upgraded together after testing. -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+</lint>

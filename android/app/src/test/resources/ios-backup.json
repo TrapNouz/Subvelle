@@ -1,0 +1,61 @@
+{
+  "exportedAt" : 817434900,
+  "schemaVersion" : 1,
+  "subscriptions" : [
+    {
+      "amount" : 16.49,
+      "archived" : false,
+      "category" : "Streaming",
+      "currency" : "CAD",
+      "id" : "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+      "interval" : {
+        "count" : 1,
+        "unit" : "month"
+      },
+      "name" : "Netflix",
+      "nextRenewal" : 728422200,
+      "notes" : "Family plan",
+      "reminderDays" : 3,
+      "startDate" : 728422200,
+      "status" : "active",
+      "symbol" : "play.tv.fill"
+    },
+    {
+      "amount" : 119.88,
+      "archived" : true,
+      "category" : "Privacy & VPN",
+      "currency" : "EUR",
+      "endDate" : 915166800,
+      "id" : "0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D",
+      "interval" : {
+        "count" : 1,
+        "unit" : "year"
+      },
+      "name" : "Proton",
+      "nextRenewal" : 730875600,
+      "notes" : "",
+      "startDate" : 699253200,
+      "status" : "paused",
+      "symbol" : "lock.shield.fill",
+      "trialEnd" : 730875600
+    },
+    {
+      "amount" : 12.5,
+      "archived" : false,
+      "category" : "Fitness",
+      "currency" : "USD",
+      "id" : "11111111-2222-4333-8444-555555555555",
+      "interval" : {
+        "count" : 10,
+        "unit" : "day"
+      },
+      "name" : "Gym",
+      "nextRenewal" : 770443200,
+      "notes" : "",
+      "reminderDays" : 14,
+      "startDate" : 770443200,
+      "status" : "active",
+      "symbol" : "creditcard.fill"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: subscriptions and settings are included in the user's Google device backup and in
+     device-to-device transfer, the Android counterpart of the iPhone's iCloud device backup. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="subscriptions.json" />
+        <include domain="sharedpref" path="settings.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="subscriptions.json" />
+        <include domain="sharedpref" path="settings.xml" />
+    </device-transfer>
+</data-extraction-rules>
