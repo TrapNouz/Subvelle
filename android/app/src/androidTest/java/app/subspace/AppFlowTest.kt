@@ -43,6 +43,9 @@ class AppFlowTest {
     }
     @After fun close() { scenario?.close() }
     /** Launches and waits for the subscriptions to load (it happens off the main thread). */
+    private fun shell(command: String): String =
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)).use { it.readBytes().decodeToString() }
+
     private fun launch(readyTag: String = "tab-overview") {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(15_000) { compose.onAllNodesWithTag(readyTag).fetchSemanticsNodes().isNotEmpty() }
@@ -85,6 +88,8 @@ class AppFlowTest {
         }
         SubscriptionStore(context).save(records)
         launch(readyTag = "overviewList")
+        // Frame statistics for the scrolling below (reported by Android's renderer; printed by CI).
+        shell("dumpsys gfxinfo ${context.packageName} reset")
         compose.onNodeWithTag("overviewList").performScrollToNode(hasTestTag("overviewBottom"))
         compose.onNodeWithTag("tab-subscriptions").performClick()
         compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasText("Plan 300", substring = true))
@@ -93,5 +98,8 @@ class AppFlowTest {
         compose.onNodeWithTag("analyticsList").performScrollToNode(hasTestTag("analyticsBottom"))
         compose.onNodeWithTag("analyticsBottom").performClick()
         compose.onNodeWithTag("paymentCalendar").assertIsDisplayed()
+        val stats = shell("dumpsys gfxinfo ${context.packageName}").lines()
+            .filter { line -> listOf("Total frames rendered", "Janky frames", "50th percentile", "90th percentile", "95th percentile", "99th percentile", "Number Slow UI thread", "Number Frame deadline missed").any { line.trim().startsWith(it) } }
+        stats.forEach { android.util.Log.i("SubspaceFrames", it.trim()) }
     }
 }
