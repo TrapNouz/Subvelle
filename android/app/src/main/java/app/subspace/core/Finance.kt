@@ -141,8 +141,13 @@ object Money {
         if (normalized.length > 38 || !Regex("^[0-9]+(?:\\.[0-9]+)?$").matches(normalized)) return null
         return normalized.toBigDecimalOrNull()
     }
+    /** Formatters are expensive to create, so each thread keeps one per locale and currency. */
+    private val formatters = ThreadLocal.withInitial { HashMap<String, NumberFormat>() }
+
     fun format(amount: BigDecimal, currency: String, locale: Locale = Locale.getDefault()): String = try {
-        NumberFormat.getCurrencyInstance(locale).apply { this.currency = Currency.getInstance(currency) }.format(amount)
+        formatters.get()!!.getOrPut("${locale.toLanguageTag()}|$currency") {
+            NumberFormat.getCurrencyInstance(locale).apply { this.currency = Currency.getInstance(currency) }
+        }.format(amount)
     } catch (_: IllegalArgumentException) { "${amount.toPlainString()} $currency" }
 
     /** Editing text for an amount, in the user's decimal style. */

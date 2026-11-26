@@ -100,8 +100,10 @@ import java.time.ZoneOffset
 fun SubscriptionsScreen(state: UiState, model: AppModel, actions: Actions) {
     var query by remember { mutableStateOf(SubscriptionListQuery()) }
     val rows = remember(query, state.records, state.rates, state.currency) { query.apply(state.records, state.currency, state.rates) }
-    val engine = remember { RecurrenceEngine() }
-    val today = remember { LocalDate.now() }
+    val nextDates = remember(state.records) {
+        val engine = RecurrenceEngine(); val today = LocalDate.now()
+        state.records.associate { it.id to engine.nextPayment(it, today)?.date }
+    }
     if (state.records.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             EmptyState("Everything recurring, together", "Search ${ServicePreset.all.size} familiar services or create your own. Enter the price you pay; we’ll take care of the schedule.", actions::add)
@@ -133,7 +135,7 @@ fun SubscriptionsScreen(state: UiState, model: AppModel, actions: Actions) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
                         .combinedClickable(onClick = { actions.open(record) }, onLongClick = { menu = true }, onLongClickLabel = "More actions")
                         .padding(horizontal = 14.dp, vertical = 4.dp).testTag("row-${record.name}"),
-                ) { SubscriptionRow(record, engine.nextPayment(record, today)?.date) }
+                ) { SubscriptionRow(record, nextDates[record.id]) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; actions.edit(record) })
                     DropdownMenuItem(text = { Text(if (record.archived) "Restore" else "Archive") }, leadingIcon = { Icon(if (record.archived) Icons.Rounded.Unarchive else Icons.Rounded.Archive, null) },

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -217,18 +218,14 @@ fun AnalyticsScreen(state: UiState, actions: Actions) {
                 item(key = "catTitle") { Column(width) { SectionTitle("Where it goes", "Normalized annual cost by category") } }
                 item(key = "cat") { Column(width) { Card { if (categories.isEmpty()) Text("Refresh exchange rates to show this breakdown.") else DonutChart(categories, state.currency) } } }
                 item(key = "svcTitle") { Column(width) { SectionTitle("By subscription", "Normalized annual cost · ${state.currency}") } }
-                item(key = "svc") {
-                    Column(width) {
-                        Card {
-                            val top = ranked.firstOrNull()?.second?.toDouble()?.takeIf { it > 0 } ?: 1.0
-                            ranked.forEach { (record, amount) ->
-                                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { actions.open(record) }.padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row { Text(record.name, modifier = Modifier.weight(1f)); Text(Money.format(amount, state.currency), fontWeight = FontWeight.SemiBold) }
-                                    LinearProgressIndicator(progress = { (amount.toDouble() / top).toFloat() }, modifier = Modifier.fillMaxWidth(), color = ChartColors.forecast, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest, drawStopIndicator = {})
-                                }
-                            }
-                            if (ranked.isEmpty()) Text("No converted amounts available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                val top = ranked.firstOrNull()?.second?.toDouble()?.takeIf { it > 0 } ?: 1.0
+                if (ranked.isEmpty()) item(key = "svcEmpty") { Column(width) { Card { Text("No converted amounts available.", color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
+                // One lazy item per service, so only visible rows are composed (lists can be long).
+                items(ranked, key = { "svc-" + it.first.id }, contentType = { "service" }) { (record, amount) ->
+                    Column(width.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable { actions.open(record) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row { Text(record.name, modifier = Modifier.weight(1f)); Text(Money.format(amount, state.currency), fontWeight = FontWeight.SemiBold) }
+                        LinearProgressIndicator(progress = { (amount.toDouble() / top).toFloat() }, modifier = Modifier.fillMaxWidth(), color = ChartColors.forecast, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest, drawStopIndicator = {})
                     }
                 }
                 item(key = "curTitle") { Column(width) { SectionTitle("Across currencies", "Converted annual costs by original billing currency") } }
