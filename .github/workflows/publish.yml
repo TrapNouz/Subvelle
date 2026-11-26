@@ -1,4 +1,4 @@
-name: Publish verified SideStore IPA
+name: Publish verified iPhone build
 on:
   workflow_dispatch:
     inputs:
@@ -79,16 +79,18 @@ jobs:
           SOURCE_RUN: ${{ inputs.run_id }}
         run: |
           cat > release-notes.md <<EOF_NOTES
-          Native iOS 26+ subscription tracker with Liquid Glass, subscription management, financial charts, payment calendar, local reminders, currency conversion, and JSON backups.
+          Subspace: a private, local-first subscription tracker. Overview and normalized costs, 147 service presets, flexible schedules, analytics and a payment calendar, multi-currency totals, renewal reminders, and JSON backups with automatic backup to a folder you choose.
 
-          Download the IPA below and import it into SideStore. This IPA is unsigned; SideStore must sign it before installation. No Apple credentials or signing certificates were used by the build.
+          Downloads (pick the file for your phone):
+          - iPhone (iOS 26+): Subspace-<version>-<build>.ipa. Import it into SideStore, which signs and installs it.
+          - Android (8.0+): Subspace-<version>-<build>.apk. Open it on your phone and allow the install when asked.
+
+          Backups from either version import into the other. Each download has a SHA-256 checksum file.
 
           Verified build: https://github.com/$GH_REPO/actions/runs/$SOURCE_RUN
           Source revision: $SOURCE_SHA
 
-          All 12 financial tests and four SwiftData persistence tests passed. Simulator compilation and unsigned ARM64 iPhone Release compilation succeeded. The IPA version, ZIP integrity, Payload structure, device platform, and executable architecture were checked. A SHA-256 checksum is attached.
-
-          Physical-device installation and notification delivery have not been manually verified. Historical charts reconstruct payment schedules, and exchange rates may not cover every billing currency. Open the app periodically to refresh the local notification queue.
+          Every build runs the core, storage and UI test suites; the release files are checked for version, identifier, integrity and architecture before publishing. Hand testing on real phones (installing, notifications, accessibility) is listed in VALIDATION.md.
           EOF_NOTES
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/*.ipa release/*.sha256 --clobber

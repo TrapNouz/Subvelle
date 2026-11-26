@@ -1,4 +1,4 @@
-name: Test and build SideStore IPA
+name: iPhone · build, test and IPA
 on:
   workflow_dispatch:
     inputs:
@@ -175,4 +175,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release create "$TAG" release/*.ipa --verify-tag --title "Subspace $TAG" \
-            --notes 'Unsigned iPhone IPA for SideStore. SideStore must sign the app before installation. Requires iOS 26 or later. No Apple credentials or signing secrets are used by this build.'
+            --notes 'Subspace: a private, local-first subscription tracker. iPhone (iOS 26+): import the .ipa into SideStore, which signs and installs it. Android (8.0+): the signed .apk is attached by the Android workflow when its build finishes; open it on your phone to install. Backups from either version import into the other.'

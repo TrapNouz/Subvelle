@@ -1,37 +1,36 @@
 # Validation report
 
-Verified on 2026-11-14.
+Last updated 2026-11-26 for Subspace 1.1.0.
 
-## Successful GitHub builds and release
+## Automated checks on every build
 
-- [Pull-request build 43567761519](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567761519): **success**.
-- [Merged-main build 43567908281](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567908281): **success**.
-- [Release publishing job 43568662620](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43568662620): **success**.
-- [Subspace 1.0.0 release](https://github.com/TrapNouz/Subvelle-Ios/releases/tag/v1.0.0).
+| Check | iPhone build | Android build |
+|---|---|---|
+| Core logic (schedules, month-end clamping, leap years, currency conversion, totals, validation, list filtering and sorting, backup rules) | 20 Swift tests, macOS and Linux | 15 JVM unit tests |
+| Storage and backups (save, edit, archive, delete, reopen from disk, validated atomic import, automatic folder backup with pruning and restore) | 5 tests on the simulator | Covered by unit and UI tests |
+| UI flows (add a subscription, persistence across launches, empty states, safe areas, landscape, large text, light mode, reduced motion, charts) | 5 UI tests on an iOS 26 simulator | 2 UI tests on an Android 14 emulator |
+| Large data set | — | 2 more emulator tests with 300 subscriptions: every tab renders and scrolls to the end, and frame statistics are recorded during real swipe scrolling |
+| Static analysis | Swift 6 strict concurrency | Android Lint with errors failing the build: no issues |
+| Release package | Unsigned ARM64 IPA: version, ID, platform and architecture verified before publishing | R8-optimized APK (about 1.8 MB) with startup profiles; signature verified with `apksigner` |
 
-GitHub’s macOS 26 runner used Xcode 26.6 with the iOS 26.5 SDK. XcodeGen generated the project successfully. The Financial domain suite passed **12 tests**. The app and test host compiled for an ARM64 iPhone simulator, then **all four SwiftData tests passed**, including database reopening from disk, transactional backup validation/import, decimal persistence, and CRUD/archive/restore behavior. The Release configuration then built successfully for `generic/platform=iOS` with signing disabled. The app was packaged with the standard Payload structure and uploaded as an IPA artifact.
+## Cross-version backup compatibility
 
-The released file is `Subspace-1.0.0-3.ipa`, marketing version `1.0.0`, build `3`, minimum iOS `26.0`, bundle identifier `app.subspace.ios`, platform `iPhoneOS`. It came from run 43567761519, source revision `9aae990ba5b1190831286090921d44454213f0d7`. Its Git tree (`e26f7677b42f6f0dd5e97d7879f83da9f474aad1`) exactly matches the merged-main revision `7202ddc435e98ab96008ccb954e52fc44f03d802`.
+- A backup produced by the iPhone app's own `SubspaceCore` code is a fixture in the Android unit tests. Android reads every field exactly, including local times, decimals, optional fields, categories with special characters, and "reminder off".
+- A backup written by the Android app was decoded and validated by `SubspaceCore`, with all fields matching.
+- This check found and fixed a real bug before release: a missing reminder field would have been read as "3 days" instead of "off".
 
-The IPA was downloaded and independently checked for ZIP integrity, `Payload/Subspace.app/Info.plist`, bundle identifier, version, minimum OS, iPhoneOS platform, and an ARM64 Mach-O executable. The GitHub publishing job repeated these checks and attached the IPA plus its checksum to the release.
+## Releases
 
-SHA-256:
+- [Subspace 1.1.0](../../releases/tag/v1.1.0): automatic backup to a chosen folder; export file names use the local date.
+- [Subspace 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
+- [Subspace 1.0.0](../../releases/tag/v1.0.0): first release.
 
-```text
-ad9cff4a9df19def945b0db5950b0afafc0aa2f1b35d18fc2f4d54630446f1a9  Subspace-1.0.0-3.ipa
-```
+## Not yet verified on real phones
 
-## Additional authoring checks
+Automated tests and simulators do not replace testing on devices. Still to check by hand:
 
-The original Linux authoring environment had no Xcode. Apple's temporary Swift 6.2.1 Ubuntu toolchain compiled SubspaceCore and ran all 12 financial-domain tests successfully. The Swift frontend and an independent Tree-sitter parser accepted all Swift source. YAML, asset JSON, and the original 1024×1024 RGB app icon were checked.
-
-The first Xcode run exposed a collision between the app's `Category` type and SwiftUI's type of the same name. Explicit `SubspaceCore.Category` qualification resolved it. A subsequent run compiled the app but was canceled when a skills-only merge started a new main run; both the PR and merged-main runs then succeeded. Local release-asset upload was denied by the connection, so a GitHub-hosted publishing workflow completed that upload successfully using its built-in token. No signing secrets were needed.
-
-## Not manually verified
-
-- Physical-device/SideStore installation and signing.
-- Visual layout, VoiceOver, large Dynamic Type, and all interactive flows on a device.
-- Real notification delivery under different Focus/permission settings.
-- The future tag-triggered release path end-to-end; the supplied automatic workflow is configured, and this initial release was published using the successful verified-artifact publishing workflow.
-
-Passing tests and a successful iOS build do not substitute for physical-device visual and notification testing. The IPA is unsigned and must be signed by SideStore before installation.
+- Installing and updating: SideStore signing on iPhone; installing over a previous version on Android.
+- Notification delivery under different permission, Focus, battery-saver and Doze settings.
+- Automatic backup to cloud-drive folders with each provider. Folder access is granted through the system picker; behavior depends on the provider app.
+- Visual review, screen readers (VoiceOver and TalkBack), and the largest text sizes on real screens.
+- Smoothness on real hardware. CI measures frame timing on an emulator without a GPU, which understates real-device performance.

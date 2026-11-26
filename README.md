@@ -1,54 +1,85 @@
 # Subspace
 
-A native, local-first iPhone subscription manager for **iOS 26+**, using SwiftUI, native Liquid Glass, Swift Charts, SwiftData, and UserNotifications. No account, ads, tracking SDKs, bank access, paid APIs, or signing secrets.
+A private, local-first subscription tracker for your phone. Know what you pay, what renews next, and where your money goes, without accounts, ads, tracking, bank access, or paid APIs.
 
-## What’s included
+Subspace is one app with a native version for each phone platform. Both versions have the same features, the same financial rules, and the same backup format, so you can move your subscriptions from one phone to another.
 
-- Four native glass tabs: Overview, Subscriptions, Analytics, Settings. Glass add action, native sheets, accessible labels, Dynamic Type, dark/system appearance, spring/number transitions, and system-aware motion.
-- Dashboard with normalized monthly/annual/weekly costs, active count, next-payment countdown, upcoming renewals, and largest annual commitments.
-- Interactive monthly/daily and annual/monthly payment charts, year navigation, current normalized average comparison, category donut selection, per-service cost chart, and converted spending grouped by original billing currency.
-- Full-screen month/year payment calendar, daily payment totals, and subscription detail sheets.
-- Add/edit, search/filter, pause/cancel, archive/restore, and confirmed deletion. Weekly, biweekly, monthly, quarterly, semiannual, annual, and custom day/week/month/year intervals. Trial, notes, end date, reminder, currency, category, and SF Symbol icon selection.
-- 147 service presets across 13 categories, with original monograms and SF Symbols. No downloaded logos or assumed prices.
-- Decimal financial logic; CAD reporting default; ISO billing currencies; offline FX cache from Frankfurter’s central-bank reference rates; source-date display and explicit partial totals when rates are unavailable.
-- Local versioned SwiftData storage, transactional JSON merge/import, JSON export, and renewal notifications at 9 AM local time (1/3/7/14 days ahead).
-- Unit tests for recurrence, financial summaries, Decimal conversion, input validation, backup validation, and SwiftData CRUD/round trips.
-- macOS GitHub Actions tests, unsigned device build, standard Payload IPA packaging, downloadable artifacts, and automatic tagged releases.
+## Features
 
-## Download and verified build status
+- **Overview**: normalized monthly, annual and weekly cost, active plans, a countdown to the next payment, upcoming renewals, and your largest commitments.
+- **Subscriptions**: 147 service presets in 13 categories (names and original monograms only; no logos or assumed prices), or create your own. Search, filter by status and category, and sort by renewal, amount or name. Pause, cancel, archive, restore, or delete with confirmation.
+- **Flexible schedules**: weekly, every two weeks, monthly, quarterly, every six months, annually, or any custom interval of days, weeks, months or years, plus trials, end dates and notes.
+- **Analytics**: interactive spending chart by month or by day, the normalized monthly average, cost by category, by subscription and by billing currency, and a full payment calendar.
+- **Currencies**: report in any currency (CAD by default). Exact decimal math, with each amount converted before totals are added. Exchange rates come from Frankfurter's central-bank reference rates and are cached for offline use; missing rates are flagged, never guessed.
+- **Reminders**: local notifications 1, 3, 7 or 14 days before a renewal, around 9 AM local time.
+- **Backups**: export and import JSON, plus automatic backup after every change to a folder you choose, for example a cloud-drive folder. Backups from either version import into the other.
+- **Accessible**: dark or system appearance, dynamic text sizes, screen-reader labels, and reduced-motion support.
 
-**[Download Subspace 1.0.0 from Releases](https://github.com/TrapNouz/Subvelle-Ios/releases/tag/v1.0.0)**. Choose `Subspace-1.0.0-3.ipa` and import it into SideStore on an iOS 26+ iPhone. A SHA-256 checksum is attached. This is a private repository: sign in with your authorized GitHub account to download it.
+## Download
 
-The iOS app was compiled and tested successfully on GitHub’s macOS runner under Xcode 26.6. All **12 financial tests and four SwiftData tests passed**, followed by a successful unsigned ARM64 iPhone Release build. Both the [pull-request build](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567761519) and [merged-main build](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43567908281) passed. The [publishing job](https://github.com/TrapNouz/Subvelle-Ios/actions/runs/43568662620) verified the IPA and attached it to the release.
+Every release is on the [Releases page](../../releases). Pick the file for your phone:
 
-The released IPA comes from successful run `43567761519`, source revision `9aae990ba5b1190831286090921d44454213f0d7`. That revision and merged-main revision `7202ddc435e98ab96008ccb954e52fc44f03d802` have the exact same Git tree. GitHub Actions handled the asset upload using its built-in token; no personal signing secrets were added. See `VALIDATION.md` for the full report. Physical-device installation, visual review, and real notification delivery have not been manually verified.
+| Your phone | File | How to install |
+|---|---|---|
+| iPhone (iOS 26 or later) | `Subspace-<version>-<build>.ipa` | Import it into [SideStore](https://sidestore.io), which signs and installs it. |
+| Android (8.0 or later) | `Subspace-<version>-<build>.apk` | Open it on your phone and allow installs from your browser or file manager when asked. |
 
-## Build on GitHub from Windows
+Each file has a `.sha256` checksum next to it. Updates install over the previous version and keep your data.
 
-1. Create a GitHub repository and commit this directory, including `.github/workflows/build.yml`, `Package.swift`, `Tests`, `Subspace`, and `project.yml`. The generated Xcode project is intentionally not checked in: CI generates it with XcodeGen.
-2. Open **Actions → Test and build SideStore IPA → Run workflow**. Pushes to `main`/`master` and pull requests also run it.
-3. The hosted **macos-26** runner selects current stable Xcode and verifies an iOS 26+ SDK. It runs `swift test`, compiles the whole iOS app, and runs SwiftData tests on an available iOS 26 iPhone simulator. It then builds for `generic/platform=iOS` with signing disabled.
-4. When the run succeeds, open its **Artifacts** section and download `Subspace-<version>-unsigned-IPA`. Extract the artifact ZIP to obtain `Subspace-<version>-<run number>.ipa`.
-5. For a release, push a semantic version tag, for example:
+## Privacy
 
-   ```sh
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+- Subscriptions are stored only on your phone.
+- The only network request fetches public exchange rates; your subscriptions are never sent.
+- Automatic backups are written only to the folder you choose.
+- Your phone's own device backup (iCloud Backup or Google backup) may include the app's data, depending on your settings.
 
-   On a successful run, **Releases → Subspace v1.0.0** contains the IPA directly. The tag sets the app’s marketing version; the Actions run number sets its build version. Tags must use `vMAJOR.MINOR.PATCH`.
+Backups are readable JSON files containing financial data, so store and share them carefully.
 
-6. Open/import the IPA with **SideStore** on an iOS 26+ iPhone. SideStore handles signing and sideloading using its own setup and account requirements. The IPA is deliberately unsigned; iOS cannot install it unsigned. This repository does not require an Apple ID, signing certificates, an Apple Developer membership, or App Store Connect secrets. GitHub’s built-in token grants release permission only to the release job.
+## Moving between phones
 
-GitHub-hosted runner availability, repository Actions quotas, and runner image changes are controlled by GitHub. If a future runner lacks an iOS 26 simulator, install a matching runtime or adjust the simulator-selection step for a newer compatible runtime. Use the test-result artifact to diagnose CI failures. Failed tests prevent IPA publication.
+1. On the old phone: **Settings → Export backup** (or use the latest automatic backup file, `Subspace Backup.json`).
+2. Copy the file to the new phone, for example through a cloud drive or by email to yourself.
+3. On the new phone: **Settings → Import backup**. Subscriptions with matching IDs are replaced; others are kept.
 
-## Publish an existing verified build
+Both versions write exactly the same format: `schemaVersion`, `exportedAt` and the list of subscriptions, with dates as seconds since 2001-01-01, exact decimal amounts, and identical field names. The Android test suite reads a backup produced by the iPhone code, and an Android-written backup has been validated by the iPhone code.
 
-The additional **Actions → Publish verified SideStore IPA** workflow publishes an already-tested artifact without rebuilding. Enter a successful `build.yml` run ID and a tag matching the IPA's marketing version (for example `v1.0.0`). It validates the source run, version, bundle identifier, device platform, ARM64 executable, and ZIP integrity, then uploads the IPA and its SHA-256 checksum using GitHub’s built-in token. Future version-tag pushes still use the automatic build-and-release workflow described above.
+## Financial rules (both versions)
 
-## Local development on a Mac
+- `annual = amount × periods per year`, `monthly = annual ÷ 12`, `weekly = annual × 7 ÷ 365.2425`. Day and week plans use the mean Gregorian year (365.2425 days); month and year plans use 12 months.
+- Each amount is converted to the reporting currency **before** totals are added. Unsupported currencies are excluded from converted totals and flagged.
+- An annual $120 plan adds $10 to the normalized monthly cost but appears as one $120 charge in its renewal month. Normalized figures describe your current commitment, not a cash-flow total.
+- Schedules are anchored to the renewal date you enter. Month-end dates are clamped without drifting: January 31 → February 28/29 → March 31. February 29 annual plans return to February 29 in leap years.
+- The end date includes that day's charge. A trial's end bounds the first paid charge.
+- Paused, canceled, archived and ended plans are excluded from averages, forecasts and reminders.
+- There is no bank ledger: past chart bars are estimates rebuilt from your current schedules and cached rates, and they are labeled that way.
 
-Install Xcode 26+ and XcodeGen, then:
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `Subspace/` | iPhone app (SwiftUI, Swift Charts, SwiftData). `Subspace/Core` is the `SubspaceCore` Swift package: models, schedules, currency, validation and presets. |
+| `Tests/` | iPhone tests: core logic (also runs on Linux), storage, and simulator UI tests. |
+| `Package.swift`, `project.yml` | Swift package and the XcodeGen project definition. |
+| `android/` | Android app (Kotlin, Jetpack Compose, Material 3): a port of the same core logic with JVM unit tests and emulator UI tests. |
+| `.github/workflows/` | CI for both builds and publishing. |
+
+## Building
+
+No Mac is needed: both apps build and test on GitHub Actions. To start a build manually, open **Actions**, pick the workflow and choose **Run workflow**.
+
+| Workflow | Runs on | What it does |
+|---|---|---|
+| **iPhone · build, test and IPA** (`build.yml`) | macOS | Generates the Xcode project, runs core tests, storage tests and simulator UI tests, then builds an unsigned IPA. |
+| **Android · build, test and APK** (`android.yml`) | Linux | Runs unit tests and lint, builds an optimized and shrunk release APK signed with the project key, and runs emulator UI tests, including scrolling 300 subscriptions. |
+| **Publish verified iPhone build** (`publish.yml`) | Linux | Attaches an IPA from a successful build to a release, after checking its version, identifier and architecture. |
+
+**Releases:** pushing a tag such as `v1.2.0` builds both apps with that version. The iPhone workflow creates the release, and the Android workflow attaches its APK once the release exists. A manual Android run with `release_tag` set attaches the APK to an existing release.
+
+**Android signing:** release APKs are signed with a key stored in four repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Keep a private backup of the key file and password: every future update must be signed with the same key. Never commit key files (`.gitignore` blocks `*.jks` and `*.keystore`).
+
+### Local development
+
+iPhone (requires a Mac with Xcode 26+):
 
 ```sh
 brew install xcodegen
@@ -57,32 +88,29 @@ open Subspace.xcodeproj
 swift test
 ```
 
-Select the Subspace scheme and an iOS 26 iPhone simulator. To run the persistence tests, use **Product → Test**. The Swift package is platform-independent Foundation logic and also runs on Linux with Swift 6.0+.
+Android (any OS with JDK 17 and the Android SDK):
 
-The bundle identifier is **`app.subspace.ios`**. Change `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml`, then regenerate the project. The test target uses `app.subspace.tests`. Changing an installed app’s bundle ID creates a separate sandbox, so export a backup first. There are no unsupported entitlements, app groups, iCloud containers, background push capabilities, or keychain groups.
+```sh
+cd android
+./gradlew testDebugUnitTest lintRelease assembleRelease
+```
 
-## Architecture and financial rules
+The core Swift package also builds and tests on Linux with Swift 6: `swift test`.
 
-`Subspace/Core` is the independent `SubspaceCore` package: Codable domain types, recurrence, FX, summaries, presets, and money parsing/formatting. The app links it as a local package. `Services/AppStore.swift` is a main-actor observable state owner: it coordinates persistence, transactional mutations, exchange rates, backup operations, and serial notification refreshes. Views read this shared state, so saves update all screens immediately. `Models/Persistence.swift` defines the SwiftData versioned schema and migration plan.
+### Identifiers
 
-`annual = amount × periodsPerYear`, `monthly = annual / 12`, and `weekly = annual × 7 / 365.2425`. Fixed day/week plans use the Gregorian mean year of 365.2425 days; calendar month/year plans use 12 months per year. Values remain Decimal until chart rendering, which requires Double. Totals use full precision and round only for localized display. Each original amount is converted independently through a common FX base **before** summation. Unsupported currencies are excluded and flagged, never silently treated as the reporting currency.
+| | iPhone | Android |
+|---|---|---|
+| App ID | `app.subspace.ios` (`project.yml`) | `app.subspace.android` (`android/app/build.gradle.kts`) |
+| Minimum OS | iOS 26 | Android 8.0 (API 26), targets API 36 |
 
-An annual $120 plan contributes $10 to normalized monthly cost but one $120 scheduled charge in its renewal month. Normalized figures express the current active commitment, not a calendar cash-flow total or prorated remaining-year bill. Paused/canceled/archived/expired records are excluded from current averages and future reminders. The active count includes subscriptions with missing FX; converted totals do not.
+Changing an app ID creates a separate app with separate data, so export a backup first.
 
-Recurrence is anchored to the supplied renewal date. Month and year occurrences are calculated from that anchor with day clamping, rather than adding repeatedly to February’s shortened date. January 31 → February 28/29 → March 31; February 29 annual plans recover February 29 in leap years. A February 28 anchor itself remains a day-28 plan; users should choose an original day-31 anchor for day-31 schedules. Date intervals are half-open; the optional end date includes that day’s charge. Trial end bounds the first eligible payment, and the editor requires the paid renewal anchor to fall on/after it. Schedules use the user’s current calendar and time zone, with local date-only occurrences; reminders use local 9 AM, respecting DST.
+## Reliability
 
-There is **no bank transaction ledger**: past bars are reconstructed scheduled estimates, clearly labeled. Changing amount, anchor, currency, or status recalculates the schedule; canceled and archived records do not contribute reconstructed charts. Historical conversion uses the cached reference rate, not historical daily FX. Irregular schedules are supported as custom fixed intervals; arbitrary varying charge amounts or manual exceptions are not modeled.
+- **Saving:** each version saves atomically and never deletes or recreates stored data that fails to load; a load failure is reported and the stored bytes are kept.
+- **Imports:** the whole file is validated before anything changes. Unsupported versions, duplicate IDs, invalid records, more than 10,000 records, and files over 20 MB are rejected.
+- **Automatic backups:** writes are atomic or coordinated, a short burst of edits produces one backup, and a backup is retried at launch after a failure or when the last one is a day old. Fourteen daily copies are kept, and other files in the folder are never touched.
+- **Reminders:** on iPhone, the earliest 60 reminders in a rolling two-year window are queued and refreshed on launch and after edits. On Android, a daily background job posts that day's reminders, survives reboots, and never posts the same day twice. Delivery always depends on the phone's notification, Focus and battery settings.
 
-## Privacy, backups, and resilience
-
-The only network request is an HTTPS request for public exchange rates; subscription records are never included. Frankfurter does not cover every ISO currency. Rates older than four days are labeled stale; missing rates produce partial-total warnings. Same-currency calculations always work offline. A failed refresh preserves the previous cache.
-
-SwiftData stores a unique ID and versioned Codable payload for each record. Schema V1 and an explicit migration plan provide a stable starting point. Future incompatible schema changes must introduce a new `VersionedSchema` and migration stage; incompatible payload changes must introduce a payload migration/default decoding policy. The app never deletes/recreates a failed database. A launch failure presents a storage error, and corrupted record loading is reported while preserving stored bytes.
-
-Exports are readable JSON with `schemaVersion`, `exportedAt`, and all records (including archived records). Imports validate the complete backup before modifying anything, merge by UUID in one transaction, and roll back on save failure. Unsupported versions, duplicate IDs, invalid records, >10,000 records, and files larger than 20 MB are rejected. There is a confirmation before merging. JSON uses Foundation’s standard numeric Date encoding and exact Decimal values. Keep exports private. Device/iCloud backups follow the user’s OS backup settings; Subspace itself does not sync.
-
-Notifications are local and permission-based. iOS limits pending notifications; Subspace schedules the earliest 60 eligible reminders in a rolling two-year window and replenishes them on foreground and edits. Reminders due earlier than the current time are not backfilled. Opening the app periodically is necessary for continued coverage; delivery is subject to Focus, permission, and OS scheduling. Rescheduling is serialized to prevent overlapping edits from restoring obsolete reminders. No background execution or remote notification delivery is promised.
-
-## Design and accessibility
-
-Native `TabView` provides the iOS 26 glass tab bar and navigation surfaces. `GlassEffectContainer`, `.glassEffect`, `.buttonStyle(.glass)`, and `.glassProminent` are used for floating and contextual controls. Large reading/financial surfaces use quiet opaque/tinted cards for legibility. The app uses semantic font styles, screen-reader labels, localized currency, Reduce Motion-aware explicit animations, and native system handling of Reduce Transparency. An original orbital app icon is bundled. Verify appearance, contrast, chart interaction, large Dynamic Type, VoiceOver, and notification behavior on real devices before distribution.
+See [`VALIDATION.md`](VALIDATION.md) for what has been tested and what still needs checking on real phones.

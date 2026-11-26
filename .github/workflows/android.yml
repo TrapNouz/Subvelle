@@ -1,4 +1,4 @@
-name: Android build, test and release
+name: Android · build, test and APK
 on:
   workflow_dispatch:
     inputs:
@@ -74,7 +74,7 @@ jobs:
           cp "$src" "out/${{ steps.version.outputs.apk }}"
           (cd out && sha256sum *.apk > "${{ steps.version.outputs.apk }}.sha256")
           ls -la out
-      - name: Check the iOS backup compatibility file
+      - name: Check the cross-version backup file
         run: test -s app/build/android-backup.json
       - uses: actions/upload-artifact@v4
         with:
@@ -153,4 +153,4 @@ jobs:
             [ "$GITHUB_REF_TYPE" = tag ] || break
             sleep 30
           done
-          gh release create "$TAG" $files --title "Subspace $TAG" --notes "Signed Android APK. Install by opening the APK on your phone and allowing installs from your browser or file manager."
+          gh release create "$TAG" $files --title "Subspace $TAG" --notes "Subspace: a private, local-first subscription tracker. Android (8.0+): open the .apk on your phone and allow the install when asked. Backups from either version import into the other."
