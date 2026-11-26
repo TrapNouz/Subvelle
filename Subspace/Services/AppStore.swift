@@ -88,6 +88,28 @@ import SubspaceCore
         } catch { context.rollback(); throw error }
         reload(); scheduleNotifications(); scheduleAutoBackup(); return imported.count
     }
+    /// Reads and validates a backup picked in Files without changing anything; returns its bytes and
+    /// record count. Opens the picker's security scope and uses a coordinated read, so a file that
+    /// lives only in iCloud Drive is downloaded first. Blocking: call off the main actor.
+    nonisolated static func readBackupFile(at url: URL) throws -> (Data, Int) {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        var coordinationError: NSError?
+        var result: Result<Data, any Error> = .failure(DataError.invalid("The backup file could not be read."))
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [.withoutChanges], error: &coordinationError) { readable in
+            result = Result {
+                let size = try readable.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                guard size <= 20_000_000 else { throw DataError.invalid("Backup exceeds the 20 MB import limit.") }
+                return try Data(contentsOf: readable)
+            }
+        }
+        if let coordinationError { throw coordinationError }
+        let data = try result.get()
+        let backup: Backup
+        do { backup = try JSONDecoder().decode(Backup.self, from: data) }
+        catch { throw DataError.invalid("This file is not a Subvelle backup. Choose a file exported from Subvelle, such as “\(BackupPlan.latestFileName)”.") }
+        return (data, try backup.validated().count)
+    }
     func backupData() throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(Backup(subscriptions: records))

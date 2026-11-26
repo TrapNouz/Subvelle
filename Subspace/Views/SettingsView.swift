@@ -14,7 +14,10 @@ struct BackupExport: Transferable, Sendable {
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.openURL) private var openURL
-    @State private var importing = false
+    /// One file picker for the whole screen: SwiftUI mishandles several `fileImporter`s in one
+    /// hierarchy (the inner one took over, so Import showed a folders-only picker).
+    @State private var picking = false
+    @State private var pickMode = FilePickMode.backupFile
     @State private var exporting = false
     @State private var document = BackupExport()
     @State private var pendingImport: Data?
@@ -60,10 +63,10 @@ struct SettingsView: View {
                         do { document = BackupExport(data: try store.backupData()); exporting = true }
                         catch { store.error = error.localizedDescription }
                     }.accessibilityIdentifier("exportBackup")
-                    Button("Import backup", systemImage: "square.and.arrow.down") { importing = true }
+                    Button("Import backup", systemImage: "square.and.arrow.down") { pickMode = .backupFile; picking = true }.accessibilityIdentifier("importBackup")
                     if let result { Text(result).font(.caption).foregroundStyle(.secondary) }
                 } header: { Text("Backup & restore") } footer: { Text("JSON backups include all plans. Import replaces matching IDs and preserves other plans. Export a recovery copy first.") }
-                AutoBackupSection()
+                AutoBackupSection(chooseFolder: { pickMode = .folder; picking = true })
                 Section("Privacy & information") {
                     Label("On-device storage", systemImage: "internaldrive")
                     Label("No accounts, ads, or tracking", systemImage: "hand.raised")
@@ -79,35 +82,52 @@ struct SettingsView: View {
                     // ISO 8601 formatting defaults to UTC; use the local day so evening exports are not dated tomorrow.
                     switch outcome { case .success: result = "Backup exported."; store.markExported(); case .failure(let error): store.error = error.localizedDescription }
                 })
-                .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { outcome in
-                    do {
-                        let url = try outcome.get()
-                        let access = url.startAccessingSecurityScopedResource()
-                        defer { if access { url.stopAccessingSecurityScopedResource() } }
-                        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                        guard size <= 20_000_000 else { throw DataError.invalid("Backup exceeds the 20 MB import limit.") }
-                        let data = try Data(contentsOf: url)
-                        importCount = try JSONDecoder().decode(Backup.self, from: data).validated().count
-                        pendingImport = data; confirmation = true
-                    } catch { store.error = error.localizedDescription }
+                .fileImporter(isPresented: $picking, allowedContentTypes: pickMode.contentTypes) { outcome in
+                    switch pickMode {
+                    case .folder:
+                        switch outcome {
+                        case .success(let folder): Task { await store.setBackupFolder(folder) }
+                        case .failure(let error): store.error = error.localizedDescription
+                        }
+                    case .backupFile:
+                        Task {
+                            do {
+                                let url = try outcome.get()
+                                // Off the main actor: an iCloud-only file is downloaded before reading.
+                                let (data, count) = try await Task.detached(priority: .userInitiated) { try AppStore.readBackupFile(at: url) }.value
+                                pendingImport = data; importCount = count
+                                // Ask only after the picker has finished closing; presenting during its
+                                // dismissal can be dropped silently.
+                                try? await Task.sleep(for: .milliseconds(600))
+                                confirmation = true
+                            } catch { store.error = error.localizedDescription }
+                        }
+                    }
                 }
-                .confirmationDialog("Import \(importCount) subscriptions? Matching IDs will be replaced. Export a backup first if needed.", isPresented: $confirmation, titleVisibility: .visible) {
+                .alert("Import \(importCount) subscriptions?", isPresented: $confirmation) {
                     Button("Merge backup") {
                         guard let pendingImport else { return }
                         do { let count = try store.importBackup(pendingImport); result = "Imported \(count) subscriptions."; self.pendingImport = nil }
                         catch { store.error = error.localizedDescription }
                     }
                     Button("Cancel", role: .cancel) { pendingImport = nil }
-                }
+                } message: { Text("Matching subscriptions will be replaced and others kept. Export a backup first if needed.") }
         }
     }
 }
 
-/// Automatic backups into a folder the user picks, typically in iCloud Drive. A separate view owns its
-/// own folder picker, so it does not compete with the JSON import picker on the Settings form.
+enum FilePickMode {
+    case backupFile, folder
+    /// Backups are matched broadly: files shared from other apps are often typed as plain text or
+    /// generic data rather than JSON. The contents are validated before anything is imported.
+    var contentTypes: [UTType] { self == .folder ? [.folder] : [.json, .plainText, .data] }
+}
+
+/// Automatic backups into a folder the user picks, typically in iCloud Drive. The folder picker is
+/// the Settings screen's single file picker (see `FilePickMode`).
 struct AutoBackupSection: View {
     @Environment(AppStore.self) private var store
-    @State private var choosingFolder = false
+    var chooseFolder: () -> Void
     @State private var confirmingStop = false
     var body: some View {
         Section {
@@ -121,10 +141,10 @@ struct AutoBackupSection: View {
                 Button { Task { await store.backUpNow() } } label: {
                     HStack { Text("Back up now"); Spacer(); if store.backingUp { ProgressView() } else { Image(systemName: "arrow.clockwise.icloud") } }
                 }.disabled(store.backingUp)
-                Button("Change folder", systemImage: "folder.badge.gearshape") { choosingFolder = true }
+                Button("Change folder", systemImage: "folder.badge.gearshape") { chooseFolder() }
                 Button("Turn off automatic backup", systemImage: "icloud.slash", role: .destructive) { confirmingStop = true }
             } else {
-                Button("Choose backup folder", systemImage: "icloud.and.arrow.up") { choosingFolder = true }
+                Button("Choose backup folder", systemImage: "icloud.and.arrow.up") { chooseFolder() }
                     .accessibilityIdentifier("chooseBackupFolder")
                 if let problem = store.backupProblem {
                     Label(problem, systemImage: "exclamationmark.icloud").font(.caption).foregroundStyle(.orange)
@@ -132,12 +152,6 @@ struct AutoBackupSection: View {
             }
         } header: { Text("iCloud Drive backup") } footer: {
             Text("Choose a folder in iCloud Drive, for example iCloud Drive › Subvelle. After every change, Subvelle saves “\(BackupPlan.latestFileName)” there and keeps \(BackupPlan.snapshotsKept) daily copies. iCloud Drive keeps them safe and available on your other devices. To restore, use Import backup. This is a backup, not live sync between devices.")
-        }
-        .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { outcome in
-            switch outcome {
-            case .success(let folder): Task { await store.setBackupFolder(folder) }
-            case .failure(let error): store.error = error.localizedDescription
-            }
         }
         .confirmationDialog("Turn off automatic backup? Existing backup files stay in the folder.", isPresented: $confirmingStop, titleVisibility: .visible) {
             Button("Turn off", role: .destructive) { store.stopAutoBackup() }

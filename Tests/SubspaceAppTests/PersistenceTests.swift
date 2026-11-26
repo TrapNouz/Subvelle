@@ -64,6 +64,29 @@ import SubspaceCore
         let stored = try XCTUnwrap(newContext.fetch(FetchDescriptor<StoredSubscription>()).first)
         XCTAssertEqual(try JSONDecoder().decode(SubscriptionRecord.self, from: stored.payload), record)
     }
+    func testBackupFilePickedInFilesCanBeReadAndImported() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let source = AppStore(container: try Persistence.container(inMemory: true))
+        try source.save(SubscriptionRecord(name: "From another phone", amount: 9))
+        let exported = try source.backupData()
+        // Files shared from other apps may arrive as .txt or without a JSON type; both must import.
+        for name in ["Subvelle Backup.json", "Subvelle Backup.txt"] {
+            let url = folder.appendingPathComponent(name)
+            try exported.write(to: url)
+            let (data, count) = try AppStore.readBackupFile(at: url)
+            XCTAssertEqual(count, 1)
+            let target = AppStore(container: try Persistence.container(inMemory: true))
+            XCTAssertEqual(try target.importBackup(data), 1)
+            XCTAssertEqual(target.records.map(\.name), ["From another phone"])
+        }
+        let notBackup = folder.appendingPathComponent("notes.json")
+        try Data(#"{"hello":"world"}"#.utf8).write(to: notBackup)
+        XCTAssertThrowsError(try AppStore.readBackupFile(at: notBackup)) { error in
+            XCTAssertTrue(error.localizedDescription.contains("not a Subvelle backup"))
+        }
+    }
     func testAutomaticFolderBackupWritesRestorableCopiesAndPrunes() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
