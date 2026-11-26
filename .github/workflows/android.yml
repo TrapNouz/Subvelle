@@ -47,9 +47,27 @@ jobs:
         id: sign
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        # Diagnostics print only lengths and yes/no checks, never secret contents.
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            cleaned=$(printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t')
+            if ! printf '%s' "$cleaned" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 (${#cleaned} characters after removing whitespace). Re-run the copy command in PowerShell right before pasting; a 4096-bit key is about 3,500-6,000 characters."
+              exit 1
+            fi
+            size=$(stat -c %s "$RUNNER_TEMP/release.jks")
+            echo "Decoded keystore: $size bytes."
+            if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
+              echo "::error::The keystore ($size bytes) could not be opened with ANDROID_KEYSTORE_PASSWORD. Check the password secret, or that the base64 secret is the complete key."
+              exit 1
+            fi
+            if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+              echo "::error::The keystore opened, but it has no key named by ANDROID_KEY_ALIAS (${#KEY_ALIAS} characters). It should be: subspace"
+              exit 1
+            fi
+            echo "Keystore, password and alias verified."
             echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "signed=true" >> "$GITHUB_OUTPUT"
           else
