@@ -44,7 +44,7 @@ struct SubscriptionsView: View {
                         .contextMenu {
                             Button("View details", systemImage: "info.circle") { selected = record }
                             Button("Edit", systemImage: "pencil") { editing = record }
-                            Button(record.archived ? "Restore" : "Archive", systemImage: "archivebox") { archive(record) }
+                            Button(record.archived ? "Restore" : "Archive", systemImage: record.archived ? "arrow.uturn.backward" : "archivebox") { archive(record) }
                             Button(record.status == .active ? "Pause tracking" : "Resume tracking", systemImage: record.status == .active ? "pause" : "play") {
                                 var updated = record; updated.status = record.status == .active ? .paused : .active
                                 save(updated)

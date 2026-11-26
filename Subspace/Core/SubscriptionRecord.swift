@@ -78,7 +78,8 @@ public struct SubscriptionRecord: Identifiable, Codable, Equatable, Sendable {
         guard !amount.isNaN, amount > 0, amount <= Decimal(1_000_000_000_000) else { throw DataError.invalid("Enter an amount greater than zero and no more than one trillion.") }
         guard currency.count == 3, Locale.commonISOCurrencyCodes.contains(currency) else { throw DataError.invalid("Choose a valid ISO currency.") }
         guard (1...1000).contains(interval.count) else { throw DataError.invalid("Billing intervals must be between 1 and 1,000.") }
-        guard nextRenewal >= Calendar.current.startOfDay(for: startDate), endDate.map({ $0 >= startDate }) ?? true else { throw DataError.invalid("Renewal and end dates must be on or after the start date.") }
+        let startDay = Calendar.current.startOfDay(for: startDate)
+        guard nextRenewal >= startDay, endDate.map({ Calendar.current.startOfDay(for: $0) >= startDay }) ?? true else { throw DataError.invalid("Renewal and end dates must be on or after the start date.") }
         if let trialEnd {
             guard trialEnd >= Calendar.current.startOfDay(for: startDate), Calendar.current.startOfDay(for: trialEnd) <= Calendar.current.startOfDay(for: nextRenewal) else { throw DataError.invalid("Trial end must be between the start date and the first paid renewal.") }
         }

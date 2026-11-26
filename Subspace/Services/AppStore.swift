@@ -82,7 +82,8 @@ import SubspaceCore
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(Backup(subscriptions: records))
     }
-    func refreshRates() async {
+    /// `silent` is used for the automatic launch refresh: offline launches keep cached rates without an alert.
+    func refreshRates(silent: Bool = false) async {
         guard !refreshingRates else { return }
         refreshingRates = true
         defer { refreshingRates = false }
@@ -94,12 +95,12 @@ import SubspaceCore
             guard let response = response as? HTTPURLResponse, response.statusCode == 200 else { throw DataError.invalid("Exchange-rate provider is unavailable.") }
             struct Response: Decodable { let base: String; let date: String; let rates: [String: Decimal] }
             let decoded = try JSONDecoder().decode(Response.self, from: data)
-            let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "yyyy-MM-dd"
+            let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = .current; formatter.dateFormat = "yyyy-MM-dd"
             guard decoded.base == "USD", !decoded.rates.isEmpty, decoded.rates.values.allSatisfy({ $0 > 0 }), let date = formatter.date(from: decoded.date) else { throw DataError.invalid("Invalid exchange-rate response.") }
             let refreshed = ExchangeRates(base: decoded.base, rates: decoded.rates, updatedAt: date)
             defaults.set(try JSONEncoder().encode(refreshed), forKey: "exchangeRates")
             rates = refreshed
-        } catch { self.error = "Rates could not be refreshed. Cached rates remain available. \(error.localizedDescription)" }
+        } catch { if !silent { self.error = "Rates could not be refreshed. Cached rates remain available. \(error.localizedDescription)" } }
     }
     func scheduleNotifications() {
         let records = records; let enabled = remindersEnabled

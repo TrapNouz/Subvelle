@@ -171,7 +171,7 @@ struct RootView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-testing") { return }
             #endif
-            if store.rates.isStale { await store.refreshRates() }
+            if store.rates.isStale { await store.refreshRates(silent: true) }
             store.scheduleNotifications()
         }
         .onChange(of: scenePhase) { _, phase in

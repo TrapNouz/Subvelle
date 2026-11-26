@@ -18,6 +18,16 @@ final class FinanceTests: XCTestCase {
         XCTAssertEqual(engine.occurrence(record, index: 2), try date(2024, 3, 31))
         XCTAssertEqual(engine.occurrence(record, index: 13), try date(2025, 2, 28))
     }
+    func testSameDayEndDateIsValidRegardlessOfTime() throws {
+        let day = Calendar.current.startOfDay(for: .now)
+        let afternoon = try XCTUnwrap(Calendar.current.date(byAdding: .hour, value: 15, to: day))
+        let morning = try XCTUnwrap(Calendar.current.date(byAdding: .hour, value: 9, to: day))
+        let record = SubscriptionRecord(name: "One-off", amount: 5, startDate: afternoon, nextRenewal: afternoon, endDate: morning)
+        XCTAssertNoThrow(try record.validate())
+        var earlier = record
+        earlier.endDate = Calendar.current.date(byAdding: .day, value: -1, to: morning)
+        XCTAssertThrowsError(try earlier.validate())
+    }
     func testLeapYearAnnualAnchorRecovers() throws {
         let start = try date(2024, 2, 29)
         let record = SubscriptionRecord(name: "Annual", amount: 120, interval: .annual, startDate: start, nextRenewal: start)
