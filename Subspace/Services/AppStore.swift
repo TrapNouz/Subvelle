@@ -124,7 +124,7 @@ import SubspaceCore
             backupFolderName = folder.lastPathComponent
             backupProblem = nil
         } catch {
-            backupProblem = "Subspace could not keep access to that folder. Choose a folder in iCloud Drive or On My iPhone. \(error.localizedDescription)"
+            backupProblem = "Subvelle could not keep access to that folder. Choose a folder in iCloud Drive or On My iPhone. \(error.localizedDescription)"
             return
         }
         await backUpNow()

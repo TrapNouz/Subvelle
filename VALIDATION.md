@@ -1,6 +1,6 @@
 # Validation report
 
-Last updated 2026-11-26 for Subspace 1.1.0.
+Last updated 2026-11-26 for Subvelle 1.1.0.
 
 ## Automated checks on every build
 
@@ -21,9 +21,9 @@ Last updated 2026-11-26 for Subspace 1.1.0.
 
 ## Releases
 
-- [Subspace 1.1.0](../../releases/tag/v1.1.0): automatic backup to a chosen folder; export file names use the local date.
-- [Subspace 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
-- [Subspace 1.0.0](../../releases/tag/v1.0.0): first release.
+- [Subvelle 1.1.0](../../releases/tag/v1.1.0): automatic backup to a chosen folder; export file names use the local date.
+- [Subvelle 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
+- [Subvelle 1.0.0](../../releases/tag/v1.0.0): first release.
 
 ## Not yet verified on real phones
 

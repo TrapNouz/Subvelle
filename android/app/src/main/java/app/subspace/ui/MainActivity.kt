@@ -134,7 +134,7 @@ fun AppRoot(state: UiState, model: AppModel) {
 
     state.error?.let { message ->
         AlertDialog(
-            onDismissRequest = model::dismissError, title = { Text("Subspace") }, text = { Text(message) },
+            onDismissRequest = model::dismissError, title = { Text("Subvelle") }, text = { Text(message) },
             confirmButton = { TextButton(onClick = model::dismissError) { Text("OK") } },
         )
     }

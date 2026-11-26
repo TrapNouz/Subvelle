@@ -149,7 +149,7 @@ data class Backup(
     val subscriptions: List<SubscriptionRecord>,
 ) {
     fun validated(): List<SubscriptionRecord> {
-        if (schemaVersion != 1) throw DataException("This backup version is not supported. Update Subspace before importing.")
+        if (schemaVersion != 1) throw DataException("This backup version is not supported. Update Subvelle before importing.")
         if (subscriptions.size > 10_000 || subscriptions.map { it.id }.toSet().size != subscriptions.size) throw DataException("Backup contains too many records or duplicate IDs.")
         subscriptions.forEach { it.validate() }
         return subscriptions

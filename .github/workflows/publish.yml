@@ -43,7 +43,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id }}
-          pattern: Subspace-*-unsigned-IPA
+          pattern: '*-unsigned-IPA'
           merge-multiple: true
           path: release
       - name: Validate the IPA version and structure
@@ -79,11 +79,11 @@ jobs:
           SOURCE_RUN: ${{ inputs.run_id }}
         run: |
           cat > release-notes.md <<EOF_NOTES
-          Subspace: a private, local-first subscription tracker. Overview and normalized costs, 147 service presets, flexible schedules, analytics and a payment calendar, multi-currency totals, renewal reminders, and JSON backups with automatic backup to a folder you choose.
+          Subvelle: a private, local-first subscription tracker. Overview and normalized costs, 147 service presets, flexible schedules, analytics and a payment calendar, multi-currency totals, renewal reminders, and JSON backups with automatic backup to a folder you choose.
 
           Downloads (pick the file for your phone):
-          - iPhone (iOS 26+): Subspace-<version>-<build>.ipa. Import it into SideStore, which signs and installs it.
-          - Android (8.0+): Subspace-<version>-<build>.apk. Open it on your phone and allow the install when asked.
+          - iPhone (iOS 26+): Subvelle-<version>-<build>.ipa. Import it into SideStore, which signs and installs it.
+          - Android (8.0+): Subvelle-<version>-<build>.apk. Open it on your phone and allow the install when asked.
 
           Backups from either version import into the other. Each download has a SHA-256 checksum file.
 
@@ -94,8 +94,8 @@ jobs:
           EOF_NOTES
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/*.ipa release/*.sha256 --clobber
-            gh release edit "$RELEASE_TAG" --draft=false --title "Subspace $RELEASE_TAG" --notes-file release-notes.md
+            gh release edit "$RELEASE_TAG" --draft=false --title "Subvelle $RELEASE_TAG" --notes-file release-notes.md
           else
             gh release create "$RELEASE_TAG" release/*.ipa release/*.sha256 --target "$SOURCE_SHA" \
-              --title "Subspace $RELEASE_TAG" --notes-file release-notes.md
+              --title "Subvelle $RELEASE_TAG" --notes-file release-notes.md
           fi

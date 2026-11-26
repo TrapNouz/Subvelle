@@ -20,7 +20,7 @@ import SubspaceCore
                     .preferredColorScheme(store.appearance == "dark" ? .dark : nil)
                     .uiTestingOverrides()
             } else {
-                ContentUnavailableView("Storage unavailable", systemImage: "externaldrive.badge.exclamationmark", description: Text("Subspace could not open its local database. Your data has not been deleted. Restart the app or restore a device backup.\n\n\(launchError ?? "Unknown storage error")"))
+                ContentUnavailableView("Storage unavailable", systemImage: "externaldrive.badge.exclamationmark", description: Text("Subvelle could not open its local database. Your data has not been deleted. Restart the app or restore a device backup.\n\n\(launchError ?? "Unknown storage error")"))
                     .preferredColorScheme(.dark)
             }
         }

@@ -86,7 +86,7 @@ fun SettingsScreen(state: UiState, model: AppModel) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag("settingsScroll"), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         FormSection("General") {
             SettingRow("Active subscriptions", state.summary.activeCount.toString())
-            SettingRow("About Subspace") { privacy = true }
+            SettingRow("About Subvelle") { privacy = true }
         }
         FormSection("Currency & exchange rates", "Cached for offline use. Missing currency pairs are excluded from totals and flagged.") {
             SettingRow("Reporting currency", "${state.currency} · ${Currencies.name(state.currency)}") { currencyPicker = true }
@@ -110,13 +110,13 @@ fun SettingsScreen(state: UiState, model: AppModel) {
                 context.startActivity(Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName))
             }
         }
-        FormSection("Backup & restore", "JSON backups include all plans and work with Subspace on iPhone too. Import replaces matching IDs and keeps other plans. Export a recovery copy first.") {
-            SettingRow("Export backup", icon = Icons.Rounded.Upload) { exporter.launch("Subspace-${LocalDate.now()}.json") }
+        FormSection("Backup & restore", "JSON backups include all plans and work with Subvelle on iPhone too. Import replaces matching IDs and keeps other plans. Export a recovery copy first.") {
+            SettingRow("Export backup", icon = Icons.Rounded.Upload) { exporter.launch("Subvelle-${LocalDate.now()}.json") }
             SettingRow("Import backup", icon = Icons.Rounded.Download) { importer.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
             result?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         FormSection("Automatic backup",
-            "Choose a folder, for example Documents/Subspace or a folder in a cloud storage app that appears in the picker. After every change, Subspace saves “${BackupPlan.LATEST_FILE_NAME}” there and keeps ${BackupPlan.SNAPSHOTS_KEPT} daily copies. To restore, use Import backup. Your subscriptions are also included in Android’s own device backup when it is turned on.") {
+            "Choose a folder, for example Documents/Subvelle or a folder in a cloud storage app that appears in the picker. After every change, Subvelle saves “${BackupPlan.LATEST_FILE_NAME}” there and keeps ${BackupPlan.SNAPSHOTS_KEPT} daily copies. To restore, use Import backup. Your subscriptions are also included in Android’s own device backup when it is turned on.") {
             val folder = state.backupFolderName
             if (folder == null) {
                 SettingRow("Choose backup folder", icon = Icons.Rounded.CreateNewFolder) { folderPicker.launch(null) }
@@ -161,7 +161,7 @@ fun SettingsScreen(state: UiState, model: AppModel) {
         onDismissRequest = { privacy = false }, title = { Text("Data & privacy") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Subspace tracks your subscriptions locally. It does not connect to banks or cancel services. Pausing or canceling a record changes your tracking only.")
+                Text("Subvelle tracks your subscriptions locally. It does not connect to banks or cancel services. Pausing or canceling a record changes your tracking only.")
                 Text("The only network request fetches public central-bank reference rates from Frankfurter. Your subscriptions are never included.")
                 Text("Backups are JSON files with readable financial data. Automatic backups are written only to the folder you choose. Android’s device backup may include app data according to your phone’s settings.")
                 Text("Reminders are local notifications, checked daily. Delivery depends on your device’s notification and battery settings.")

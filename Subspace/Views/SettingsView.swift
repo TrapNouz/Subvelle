@@ -27,7 +27,7 @@ struct SettingsView: View {
             Form {
                 Section("General") {
                     LabeledContent("Active subscriptions", value: String(store.summary.activeCount))
-                    NavigationLink("About Subspace") { AboutSubspaceView() }
+                    NavigationLink("About Subvelle") { AboutSubspaceView() }
                 }
                 Section {
                     CurrencyPicker(selection: $store.currency, title: "Reporting currency")
@@ -54,7 +54,7 @@ struct SettingsView: View {
                     Button("iOS notification settings", systemImage: "arrow.up.forward.app") {
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                     }
-                } header: { Text("Notifications") } footer: { Text("Delivered at 9 AM local time. Open Subspace periodically to refresh the queue. Defaults apply to new plans.") }
+                } header: { Text("Notifications") } footer: { Text("Delivered at 9 AM local time. Open Subvelle periodically to refresh the queue. Defaults apply to new plans.") }
                 Section {
                     Button("Export backup", systemImage: "square.and.arrow.up") {
                         do { document = BackupExport(data: try store.backupData()); exporting = true }
@@ -75,7 +75,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settingsScroll")
                 .scrollEdgeEffectStyle(.hard, for: .bottom)
                 .subscriptionToolbar()
-                .fileExporter(isPresented: $exporting, item: document, contentTypes: [.json], defaultFilename: "Subspace-\(Date.now.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day().dateSeparator(.dash)))", onCompletion: { outcome in
+                .fileExporter(isPresented: $exporting, item: document, contentTypes: [.json], defaultFilename: "Subvelle-\(Date.now.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day().dateSeparator(.dash)))", onCompletion: { outcome in
                     // ISO 8601 formatting defaults to UTC; use the local day so evening exports are not dated tomorrow.
                     switch outcome { case .success: result = "Backup exported."; store.markExported(); case .failure(let error): store.error = error.localizedDescription }
                 })
@@ -131,7 +131,7 @@ struct AutoBackupSection: View {
                 }
             }
         } header: { Text("iCloud Drive backup") } footer: {
-            Text("Choose a folder in iCloud Drive, for example iCloud Drive › Subspace. After every change, Subspace saves “\(BackupPlan.latestFileName)” there and keeps \(BackupPlan.snapshotsKept) daily copies. iCloud Drive keeps them safe and available on your other devices. To restore, use Import backup. This is a backup, not live sync between devices.")
+            Text("Choose a folder in iCloud Drive, for example iCloud Drive › Subvelle. After every change, Subvelle saves “\(BackupPlan.latestFileName)” there and keeps \(BackupPlan.snapshotsKept) daily copies. iCloud Drive keeps them safe and available on your other devices. To restore, use Import backup. This is a backup, not live sync between devices.")
         }
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { outcome in
             switch outcome {
@@ -149,11 +149,11 @@ struct AboutSubspaceView: View {
     var body: some View {
         List {
             Section {
-                Label("Subspace", systemImage: "circle.hexagongrid").font(.title2.bold())
+                Label("Subvelle", systemImage: "circle.hexagongrid").font(.title2.bold())
                 Text("Clarity for every recurring payment.")
             }
             Section("Tracking, on your terms") {
-                Text("Subspace tracks your subscriptions locally. It does not connect to banks or cancel services. Pausing or canceling a record changes your tracking only.")
+                Text("Subvelle tracks your subscriptions locally. It does not connect to banks or cancel services. Pausing or canceling a record changes your tracking only.")
                 Text("Monthly and weekly averages normalize your current commitments. Calendar totals reflect scheduled charges, while past charts are reconstructed estimates.")
             }
         }.navigationTitle("About").navigationBarTitleDisplayMode(.inline)
@@ -171,10 +171,10 @@ struct PrivacyDetailsView: View {
             }
             Section("Backups") {
                 Text("JSON exports contain readable financial data, including archived records. Store and share them carefully. Import is validated before merging and requires confirmation.")
-                Text("Automatic backups are written only to the folder you choose. If it is in iCloud Drive, Apple’s iCloud Drive syncs those files under your Apple Account; Subspace itself does not upload anything.")
+                Text("Automatic backups are written only to the folder you choose. If it is in iCloud Drive, Apple’s iCloud Drive syncs those files under your Apple Account; Subvelle itself does not upload anything.")
             }
             Section("Reminders") {
-                Text("Renewal alerts are local notifications. iOS limits the pending queue; Subspace schedules the earliest 60 reminders within two years and replenishes them when you open the app or edit a plan. Delivery depends on your device’s notification and Focus settings.")
+                Text("Renewal alerts are local notifications. iOS limits the pending queue; Subvelle schedules the earliest 60 reminders within two years and replenishes them when you open the app or edit a plan. Delivery depends on your device’s notification and Focus settings.")
             }
         }.navigationTitle("Data & privacy").navigationBarTitleDisplayMode(.inline)
     }

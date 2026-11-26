@@ -1,8 +1,8 @@
-# Subspace
+# Subvelle
 
 A private, local-first subscription tracker for your phone. Know what you pay, what renews next, and where your money goes, without accounts, ads, tracking, bank access, or paid APIs.
 
-Subspace is one app with a native version for each phone platform. Both versions have the same features, the same financial rules, and the same backup format, so you can move your subscriptions from one phone to another.
+Subvelle is one app with a native version for each phone platform. Both versions have the same features, the same financial rules, and the same backup format, so you can move your subscriptions from one phone to another.
 
 ## Features
 
@@ -21,8 +21,8 @@ Every release is on the [Releases page](../../releases). Pick the file for your 
 
 | Your phone | File | How to install |
 |---|---|---|
-| iPhone (iOS 26 or later) | `Subspace-<version>-<build>.ipa` | Import it into [SideStore](https://sidestore.io), which signs and installs it. |
-| Android (8.0 or later) | `Subspace-<version>-<build>.apk` | Open it on your phone and allow installs from your browser or file manager when asked. |
+| iPhone (iOS 26 or later) | `Subvelle-<version>-<build>.ipa` | Import it into [SideStore](https://sidestore.io), which signs and installs it. |
+| Android (8.0 or later) | `Subvelle-<version>-<build>.apk` | Open it on your phone and allow installs from your browser or file manager when asked. |
 
 Each file has a `.sha256` checksum next to it. Updates install over the previous version and keep your data.
 
@@ -37,9 +37,11 @@ Backups are readable JSON files containing financial data, so store and share th
 
 ## Moving between phones
 
-1. On the old phone: **Settings → Export backup** (or use the latest automatic backup file, `Subspace Backup.json`).
+1. On the old phone: **Settings → Export backup** (or use the latest automatic backup file, `Subvelle Backup.json`).
 2. Copy the file to the new phone, for example through a cloud drive or by email to yourself.
 3. On the new phone: **Settings → Import backup**. Subscriptions with matching IDs are replaced; others are kept.
+
+Version 1.1.0 named its automatic backups `Subspace Backup.json`. Newer versions write `Subvelle Backup.json` and leave the older files untouched; both import the same way.
 
 Both versions write exactly the same format: `schemaVersion`, `exportedAt` and the list of subscriptions, with dates as seconds since 2001-01-01, exact decimal amounts, and identical field names. The Android test suite reads a backup produced by the iPhone code, and an Android-written backup has been validated by the iPhone code.
 
@@ -54,6 +56,8 @@ Both versions write exactly the same format: `schemaVersion`, `exportedAt` and t
 - There is no bank ledger: past chart bars are estimates rebuilt from your current schedules and cached rates, and they are labeled that way.
 
 ## Repository layout
+
+Some code folders and modules still use the original internal name `Subspace`. It never appears in the apps, and keeping it avoids breaking builds and app IDs.
 
 | Path | What it is |
 |---|---|

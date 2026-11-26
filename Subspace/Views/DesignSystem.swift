@@ -181,7 +181,7 @@ struct RootView: View {
         .environment(navigation)
         .sensoryFeedback(.selection, trigger: navigation.selected)
         .transaction { if reduceMotion { $0.animation = nil; $0.disablesAnimations = true } }
-        .alert("Subspace", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
+        .alert("Subvelle", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
         .task {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-testing") { return }

@@ -128,7 +128,7 @@ jobs:
               raise SystemExit('Release tag must be vMAJOR.MINOR.PATCH (for example v1.0.0).')
           with open(os.environ['GITHUB_ENV'], 'a') as env:
               env.write('APP_VERSION=' + version + '\n')
-              env.write('IPA_NAME=Subspace-' + version + '-' + os.environ['GITHUB_RUN_NUMBER'] + '.ipa\n')
+              env.write('IPA_NAME=Subvelle-' + version + '-' + os.environ['GITHUB_RUN_NUMBER'] + '.ipa\n')
           PY
       - name: Build unsigned iPhone app
         run: |
@@ -146,7 +146,7 @@ jobs:
           /usr/bin/zip -qry "../$IPA_NAME" Payload
       - uses: actions/upload-artifact@v4
         with:
-          name: Subspace-${{ env.APP_VERSION }}-unsigned-IPA
+          name: Subvelle-${{ env.APP_VERSION }}-unsigned-IPA
           path: '*.ipa'
           if-no-files-found: error
       - name: Upload test results
@@ -165,7 +165,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: Subspace-*-unsigned-IPA
+          pattern: '*-unsigned-IPA'
           merge-multiple: true
           path: release
       - name: Publish release
@@ -174,5 +174,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" release/*.ipa --verify-tag --title "Subspace $TAG" \
-            --notes 'Subspace: a private, local-first subscription tracker. iPhone (iOS 26+): import the .ipa into SideStore, which signs and installs it. Android (8.0+): the signed .apk is attached by the Android workflow when its build finishes; open it on your phone to install. Backups from either version import into the other.'
+          gh release create "$TAG" release/*.ipa --verify-tag --title "Subvelle $TAG" \
+            --notes 'Subvelle: a private, local-first subscription tracker. iPhone (iOS 26+): import the .ipa into SideStore, which signs and installs it. Android (8.0+): the signed .apk is attached by the Android workflow when its build finishes; open it on your phone to install. Backups from either version import into the other.'

@@ -125,9 +125,9 @@ class CoreTest {
     }
 
     @Test fun backupPlanRules() {
-        assertEquals("Subspace Backup 2026-03-07.json", BackupPlan.snapshotName(day(2026, 3, 7)))
-        val snapshots = (1..16).map { "Subspace Backup 2026-01-%02d.json".format(it) }
-        assertEquals(listOf("Subspace Backup 2026-01-01.json", "Subspace Backup 2026-01-02.json"), BackupPlan.snapshotsToPrune(snapshots.shuffled() + listOf(BackupPlan.LATEST_FILE_NAME, "Notes.txt")))
+        assertEquals("Subvelle Backup 2026-03-07.json", BackupPlan.snapshotName(day(2026, 3, 7)))
+        val snapshots = (1..16).map { "Subvelle Backup 2026-01-%02d.json".format(it) }
+        assertEquals(listOf("Subvelle Backup 2026-01-01.json", "Subvelle Backup 2026-01-02.json"), BackupPlan.snapshotsToPrune(snapshots.shuffled() + listOf(BackupPlan.LATEST_FILE_NAME, "Notes.txt")))
         assertTrue(BackupPlan.isDue(null)); assertFalse(BackupPlan.isDue(1000, 1000 + 3_600_000))
         assertTrue(BackupPlan.isOverdue(null))
     }

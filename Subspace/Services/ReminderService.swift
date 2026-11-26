@@ -30,6 +30,6 @@ enum ReminderService {
             let trigger = UNCalendarNotificationTrigger(dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fire), repeats: false)
             try await center.add(UNNotificationRequest(identifier: payment.id, content: content, trigger: trigger))
         }
-        return "\(scheduled.count) reminders scheduled. iOS allows a limited queue; opening Subspace refreshes the next 60 reminders. Delivery depends on your device’s notification settings."
+        return "\(scheduled.count) reminders scheduled. iOS allows a limited queue; opening Subvelle refreshes the next 60 reminders. Delivery depends on your device’s notification settings."
     }
 }

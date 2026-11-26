@@ -70,7 +70,7 @@ import SubspaceCore
         defer { try? FileManager.default.removeItem(at: folder) }
         // Old dated copies beyond the retention limit, plus an unrelated file that must survive pruning.
         for day in 1...15 {
-            try Data("{}".utf8).write(to: folder.appendingPathComponent(String(format: "Subspace Backup 2020-01-%02d.json", day)))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent(String(format: "Subvelle Backup 2020-01-%02d.json", day)))
         }
         try Data("keep".utf8).write(to: folder.appendingPathComponent("Notes.txt"))
         let suite = "auto-backup-" + UUID().uuidString

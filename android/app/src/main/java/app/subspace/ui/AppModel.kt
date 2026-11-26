@@ -120,7 +120,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     fun readBackup(bytes: ByteArray): List<SubscriptionRecord> {
         if (bytes.size > 20_000_000) throw DataException("Backup exceeds the 20 MB import limit.")
         val backup = try { AppJson.decodeFromString(Backup.serializer(), bytes.decodeToString()) }
-        catch (error: Exception) { throw DataException("This file is not a Subspace backup. ${error.message ?: ""}") }
+        catch (error: Exception) { throw DataException("This file is not a Subvelle backup. ${error.message ?: ""}") }
         return backup.validated()
     }
     /** Merges validated records: matching IDs are replaced, others kept. */
@@ -150,7 +150,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         Reminders.schedule(context, allowed)
         _state.update {
             it.copy(remindersEnabled = allowed, notificationMessage = when {
-                enabled && !allowed -> "Notifications are turned off for Subspace. Allow them in Android settings to receive renewal reminders."
+                enabled && !allowed -> "Notifications are turned off for Subvelle. Allow them in Android settings to receive renewal reminders."
                 allowed -> "Reminders are checked every day around 9 AM. Delivery depends on your device's battery and notification settings."
                 else -> null
             })
@@ -164,7 +164,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     fun setBackupFolder(uri: Uri) {
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         try { context.contentResolver.takePersistableUriPermission(uri, flags) } catch (_: SecurityException) {
-            _state.update { it.copy(backupProblem = "Subspace could not keep access to that folder. Choose a folder on this device or in a cloud app that supports folders.") }
+            _state.update { it.copy(backupProblem = "Subvelle could not keep access to that folder. Choose a folder on this device or in a cloud app that supports folders.") }
             return
         }
         // Release the previous folder's permission so they don't accumulate.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Subspace</string>
+    <string name="app_name">Subvelle</string>
     <string name="reminder_channel">Renewal reminders</string>
     <string name="reminder_channel_description">Alerts before a subscription renews</string>
 </resources>

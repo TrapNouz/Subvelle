@@ -15,17 +15,17 @@ import Testing
     @Test("Dated copies use the local calendar day and are recognized")
     func snapshotNames() throws {
         let name = BackupPlan.snapshotName(for: try date(2026, 3, 7), calendar: calendar)
-        #expect(name == "Subspace Backup 2026-03-07.json")
+        #expect(name == "Subvelle Backup 2026-03-07.json")
         #expect(BackupPlan.isSnapshot(name))
         #expect(!BackupPlan.isSnapshot(BackupPlan.latestFileName))
-        #expect(!BackupPlan.isSnapshot("Subspace Backup 2026-03-07.json.icloud"))
+        #expect(!BackupPlan.isSnapshot("Subvelle Backup 2026-03-07.json.icloud"))
     }
 
     @Test("Only the oldest dated copies beyond the limit are pruned; other files are kept")
     func pruning() {
-        let snapshots = (1...16).map { String(format: "Subspace Backup 2026-01-%02d.json", $0) }
-        let names = snapshots.shuffled() + [BackupPlan.latestFileName, "Notes.txt", "Subspace-2026-01-01.json"]
-        #expect(BackupPlan.snapshotsToPrune(names) == ["Subspace Backup 2026-01-01.json", "Subspace Backup 2026-01-02.json"])
+        let snapshots = (1...16).map { String(format: "Subvelle Backup 2026-01-%02d.json", $0) }
+        let names = snapshots.shuffled() + [BackupPlan.latestFileName, "Notes.txt", "Subvelle-2026-01-01.json"]
+        #expect(BackupPlan.snapshotsToPrune(names) == ["Subvelle Backup 2026-01-01.json", "Subvelle Backup 2026-01-02.json"])
         #expect(BackupPlan.snapshotsToPrune(Array(snapshots.prefix(14))).isEmpty)
         #expect(BackupPlan.snapshotsToPrune(snapshots, keep: -1).count == 16)
     }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Window background matches the Compose theme so there is no white flash at launch. -->
-    <style name="Theme.Subspace" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Subvelle" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/space_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

@@ -64,12 +64,12 @@ data class SubscriptionListQuery(
 
 /** File naming, retention and freshness rules for automatic folder backups (same as iOS). */
 object BackupPlan {
-    const val LATEST_FILE_NAME = "Subspace Backup.json"
+    const val LATEST_FILE_NAME = "Subvelle Backup.json"
     const val SNAPSHOTS_KEPT = 14
     const val OVERDUE_AFTER_DAYS = 7
-    private val snapshotPattern = Regex("^Subspace Backup \\d{4}-\\d{2}-\\d{2}\\.json$")
+    private val snapshotPattern = Regex("^Subvelle Backup \\d{4}-\\d{2}-\\d{2}\\.json$")
 
-    fun snapshotName(day: LocalDate): String = "Subspace Backup $day.json"
+    fun snapshotName(day: LocalDate): String = "Subvelle Backup $day.json"
     fun isSnapshot(name: String): Boolean = snapshotPattern.matches(name)
     /** Dated copies beyond the newest [keep], oldest first. Other files in the folder are never returned. */
     fun snapshotsToPrune(names: List<String>, keep: Int = SNAPSHOTS_KEPT): List<String> =

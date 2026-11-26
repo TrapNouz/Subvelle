@@ -48,7 +48,7 @@ object FolderBackup {
     /** Blocking; call from Dispatchers.IO. */
     fun write(context: Context, folderUri: Uri, json: ByteArray, today: LocalDate = LocalDate.now()) {
         val folder = DocumentFile.fromTreeUri(context, folderUri)
-        if (folder == null || !folder.canWrite()) throw DataException("Subspace can no longer write to the backup folder. Choose it again in Settings.")
+        if (folder == null || !folder.canWrite()) throw DataException("Subvelle can no longer write to the backup folder. Choose it again in Settings.")
         writeFile(context, folder, BackupPlan.LATEST_FILE_NAME, json)
         writeFile(context, folder, BackupPlan.snapshotName(today), json)
         // Pruning is best effort: a copy that cannot be removed now is retried after the next change.

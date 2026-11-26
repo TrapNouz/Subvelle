@@ -96,7 +96,7 @@ public struct Backup: Codable, Sendable {
     public var subscriptions: [SubscriptionRecord]
     public init(subscriptions: [SubscriptionRecord]) { self.subscriptions = subscriptions }
     public func validated() throws -> [SubscriptionRecord] {
-        guard schemaVersion == 1 else { throw DataError.invalid("This backup version is not supported. Update Subspace before importing.") }
+        guard schemaVersion == 1 else { throw DataError.invalid("This backup version is not supported. Update Subvelle before importing.") }
         guard subscriptions.count <= 10000, Set(subscriptions.map(\.id)).count == subscriptions.count else { throw DataError.invalid("Backup contains too many records or duplicate IDs.") }
         try subscriptions.forEach { try $0.validate() }
         return subscriptions

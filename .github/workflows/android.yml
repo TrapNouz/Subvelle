@@ -42,7 +42,7 @@ jobs:
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="${GITHUB_REF_NAME#v}"; else version="${{ inputs.version }}"; fi
           echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Version must be MAJOR.MINOR.PATCH"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "apk=Subspace-$version-$GITHUB_RUN_NUMBER.apk" >> "$GITHUB_OUTPUT"
+          echo "apk=Subvelle-$version-$GITHUB_RUN_NUMBER.apk" >> "$GITHUB_OUTPUT"
       - name: Prepare release signing key
         id: sign
         env:
@@ -171,4 +171,4 @@ jobs:
             [ "$GITHUB_REF_TYPE" = tag ] || break
             sleep 30
           done
-          gh release create "$TAG" $files --title "Subspace $TAG" --notes "Subspace: a private, local-first subscription tracker. Android (8.0+): open the .apk on your phone and allow the install when asked. Backups from either version import into the other."
+          gh release create "$TAG" $files --title "Subvelle $TAG" --notes "Subvelle: a private, local-first subscription tracker. Android (8.0+): open the .apk on your phone and allow the install when asked. Backups from either version import into the other."
