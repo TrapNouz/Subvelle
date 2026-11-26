@@ -147,8 +147,14 @@ import SubspaceCore
         // Use the native scrolling container rather than dragging at the screen's
         // trailing edge, which can grab the scroll indicator at accessibility sizes.
         let list = app.collectionViews.firstMatch
-        if list.exists && list.isHittable { list.swipeUp(velocity: .fast) }
-        else { app.swipeUp(velocity: .fast) }
+        if list.exists && list.isHittable { list.swipeUp(velocity: .fast); return }
+        // ScrollView screens: a swipe from the screen's center can land on an interactive
+        // chart (landscape Overview), which consumes the drag. Drag in the scroll view's
+        // leading margin instead, clear of charts and the trailing scroll indicator.
+        let scroll = app.scrollViews.firstMatch
+        let target = scroll.exists && scroll.isHittable ? scroll : app.windows.firstMatch
+        target.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.8))
+            .press(forDuration: 0.05, thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.2)), withVelocity: .fast, thenHoldForDuration: 0)
     }
     private func setAccessibilitySwitch(path: [String], label: String, enabled: Bool) {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
