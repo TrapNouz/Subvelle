@@ -26,6 +26,7 @@ struct OverviewView: View {
                     } else {
                         monthlyCard
                         RateNotice()
+                        BackupNotice()
                         if let next = store.upcoming.first {
                             Surface {
                                 Button { selected = next.subscription } label: {

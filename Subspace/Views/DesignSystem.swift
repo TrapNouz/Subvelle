@@ -94,6 +94,21 @@ struct RateNotice: View {
     }
 }
 
+/// Nudges toward Settings when no backup has completed for a week, or the automatic backup is failing.
+struct BackupNotice: View {
+    @Environment(AppStore.self) private var store
+    @Environment(AppNavigation.self) private var navigation
+    var body: some View {
+        if !store.records.isEmpty, store.backupProblem != nil || BackupPlan.isOverdue(lastBackup: store.lastBackup) {
+            Button { navigation.selected = .settings } label: {
+                Label(store.backupProblem != nil ? "Automatic backup failed · review it in Settings" : "No backup in the last \(BackupPlan.overdueAfterDays) days · set up iCloud Drive backup in Settings", systemImage: "exclamationmark.icloud")
+                    .font(.caption).foregroundStyle(.orange).padding().frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+            }.buttonStyle(.plain).accessibilityIdentifier("backupNotice")
+        }
+    }
+}
+
 enum AppTab: String, CaseIterable { case overview, subscriptions, analytics, settings }
 enum AppSheet: String, Identifiable { case add; var id: String { rawValue } }
 @MainActor @Observable final class AppNavigation {
@@ -173,9 +188,10 @@ struct RootView: View {
             #endif
             if store.rates.isStale { await store.refreshRates(silent: true) }
             store.scheduleNotifications()
+            await store.backUpIfDue()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { store.scheduleNotifications() }
+            if phase == .active { store.scheduleNotifications(); Task { await store.backUpIfDue() } }
         }
     }
 }

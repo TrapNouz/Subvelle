@@ -63,6 +63,7 @@ struct SettingsView: View {
                     Button("Import backup", systemImage: "square.and.arrow.down") { importing = true }
                     if let result { Text(result).font(.caption).foregroundStyle(.secondary) }
                 } header: { Text("Backup & restore") } footer: { Text("JSON backups include all plans. Import replaces matching IDs and preserves other plans. Export a recovery copy first.") }
+                AutoBackupSection()
                 Section("Privacy & information") {
                     Label("On-device storage", systemImage: "internaldrive")
                     Label("No accounts, ads, or tracking", systemImage: "hand.raised")
@@ -74,8 +75,9 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settingsScroll")
                 .scrollEdgeEffectStyle(.hard, for: .bottom)
                 .subscriptionToolbar()
-                .fileExporter(isPresented: $exporting, item: document, contentTypes: [.json], defaultFilename: "Subspace-\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash)))", onCompletion: { outcome in
-                    switch outcome { case .success: result = "Backup exported."; case .failure(let error): store.error = error.localizedDescription }
+                .fileExporter(isPresented: $exporting, item: document, contentTypes: [.json], defaultFilename: "Subspace-\(Date.now.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day().dateSeparator(.dash)))", onCompletion: { outcome in
+                    // ISO 8601 formatting defaults to UTC; use the local day so evening exports are not dated tomorrow.
+                    switch outcome { case .success: result = "Backup exported."; store.markExported(); case .failure(let error): store.error = error.localizedDescription }
                 })
                 .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { outcome in
                     do {
@@ -97,6 +99,48 @@ struct SettingsView: View {
                     }
                     Button("Cancel", role: .cancel) { pendingImport = nil }
                 }
+        }
+    }
+}
+
+/// Automatic backups into a folder the user picks, typically in iCloud Drive. A separate view owns its
+/// own folder picker, so it does not compete with the JSON import picker on the Settings form.
+struct AutoBackupSection: View {
+    @Environment(AppStore.self) private var store
+    @State private var choosingFolder = false
+    @State private var confirmingStop = false
+    var body: some View {
+        Section {
+            if let folder = store.backupFolderName {
+                LabeledContent("Folder") { Label(folder, systemImage: "folder").labelStyle(.titleAndIcon) }
+                LabeledContent("Last backup", value: store.lastBackup.map { $0.formatted(.relative(presentation: .named)) } ?? "Not yet")
+                    .accessibilityIdentifier("lastBackup")
+                if let problem = store.backupProblem {
+                    Label(problem, systemImage: "exclamationmark.icloud").font(.caption).foregroundStyle(.orange)
+                }
+                Button { Task { await store.backUpNow() } } label: {
+                    HStack { Text("Back up now"); Spacer(); if store.backingUp { ProgressView() } else { Image(systemName: "arrow.clockwise.icloud") } }
+                }.disabled(store.backingUp)
+                Button("Change folder", systemImage: "folder.badge.gearshape") { choosingFolder = true }
+                Button("Turn off automatic backup", systemImage: "icloud.slash", role: .destructive) { confirmingStop = true }
+            } else {
+                Button("Choose backup folder", systemImage: "icloud.and.arrow.up") { choosingFolder = true }
+                    .accessibilityIdentifier("chooseBackupFolder")
+                if let problem = store.backupProblem {
+                    Label(problem, systemImage: "exclamationmark.icloud").font(.caption).foregroundStyle(.orange)
+                }
+            }
+        } header: { Text("iCloud Drive backup") } footer: {
+            Text("Choose a folder in iCloud Drive, for example iCloud Drive › Subspace. After every change, Subspace saves “\(BackupPlan.latestFileName)” there and keeps \(BackupPlan.snapshotsKept) daily copies. iCloud Drive keeps them safe and available on your other devices. To restore, use Import backup. This is a backup, not live sync between devices.")
+        }
+        .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { outcome in
+            switch outcome {
+            case .success(let folder): Task { await store.setBackupFolder(folder) }
+            case .failure(let error): store.error = error.localizedDescription
+            }
+        }
+        .confirmationDialog("Turn off automatic backup? Existing backup files stay in the folder.", isPresented: $confirmingStop, titleVisibility: .visible) {
+            Button("Turn off", role: .destructive) { store.stopAutoBackup() }
         }
     }
 }
@@ -127,6 +171,7 @@ struct PrivacyDetailsView: View {
             }
             Section("Backups") {
                 Text("JSON exports contain readable financial data, including archived records. Store and share them carefully. Import is validated before merging and requires confirmation.")
+                Text("Automatic backups are written only to the folder you choose. If it is in iCloud Drive, Apple’s iCloud Drive syncs those files under your Apple Account; Subspace itself does not upload anything.")
             }
             Section("Reminders") {
                 Text("Renewal alerts are local notifications. iOS limits the pending queue; Subspace schedules the earliest 60 reminders within two years and replenishes them when you open the app or edit a plan. Delivery depends on your device’s notification and Focus settings.")

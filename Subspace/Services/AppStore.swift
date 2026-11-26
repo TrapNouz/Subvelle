@@ -12,6 +12,14 @@ import SubspaceCore
     var notificationMessage: String?
     private(set) var rates = ExchangeRates(rates: [:], updatedAt: .distantPast)
     private(set) var refreshingRates = false
+    @ObservationIgnored private var backupTask: Task<Void, Never>?
+    /// Display name of the automatic-backup folder; nil when automatic backup is off.
+    private(set) var backupFolderName: String?
+    /// Last completed backup of any kind: automatic, or an exported file.
+    private(set) var lastBackup: Date?
+    /// Why the most recent automatic backup failed; nil when it succeeded.
+    private(set) var backupProblem: String?
+    private(set) var backingUp = false
     var currency: String { didSet { defaults.set(currency, forKey: "reportingCurrency") } }
     var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
     var remindersEnabled: Bool { didSet { defaults.set(remindersEnabled, forKey: "remindersEnabled") } }
@@ -24,6 +32,8 @@ import SubspaceCore
         appearance = defaults.string(forKey: "appearance") ?? "dark"
         remindersEnabled = defaults.bool(forKey: "remindersEnabled")
         defaultReminder = defaults.object(forKey: "defaultReminder") as? Int ?? 3
+        backupFolderName = defaults.data(forKey: "backupBookmark") == nil ? nil : defaults.string(forKey: "backupFolderName")
+        lastBackup = defaults.object(forKey: "lastBackup") as? Date
         if let cache = defaults.data(forKey: "exchangeRates") {
             do { rates = try JSONDecoder().decode(ExchangeRates.self, from: cache) }
             catch { self.error = "The exchange-rate cache could not be read. Refresh rates to restore conversions." }
@@ -54,14 +64,14 @@ import SubspaceCore
             try context.save()
         } catch { context.rollback(); throw error }
         reload()
-        scheduleNotifications()
+        scheduleNotifications(); scheduleAutoBackup()
     }
     func delete(_ record: SubscriptionRecord) throws {
         do {
             for entity in try context.fetch(FetchDescriptor<StoredSubscription>()) where entity.id == record.id { context.delete(entity) }
             try context.save()
         } catch { context.rollback(); throw error }
-        reload(); scheduleNotifications()
+        reload(); scheduleNotifications(); scheduleAutoBackup()
     }
     func importBackup(_ data: Data) throws -> Int {
         guard data.count <= 20_000_000 else { throw DataError.invalid("Backup exceeds the 20 MB import limit.") }
@@ -76,7 +86,7 @@ import SubspaceCore
             }
             try context.save()
         } catch { context.rollback(); throw error }
-        reload(); scheduleNotifications(); return imported.count
+        reload(); scheduleNotifications(); scheduleAutoBackup(); return imported.count
     }
     func backupData() throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -101,6 +111,68 @@ import SubspaceCore
             defaults.set(try JSONEncoder().encode(refreshed), forKey: "exchangeRates")
             rates = refreshed
         } catch { if !silent { self.error = "Rates could not be refreshed. Cached rates remain available. \(error.localizedDescription)" } }
+    }
+    // MARK: Automatic folder backup (iCloud Drive)
+
+    /// Starts automatic backups into a folder returned by the folder picker, writing one immediately.
+    func setBackupFolder(_ folder: URL) async {
+        let access = folder.startAccessingSecurityScopedResource()
+        defer { if access { folder.stopAccessingSecurityScopedResource() } }
+        do {
+            defaults.set(try BackupWriter.bookmarkData(for: folder), forKey: "backupBookmark")
+            defaults.set(folder.lastPathComponent, forKey: "backupFolderName")
+            backupFolderName = folder.lastPathComponent
+            backupProblem = nil
+        } catch {
+            backupProblem = "Subspace could not keep access to that folder. Choose a folder in iCloud Drive or On My iPhone. \(error.localizedDescription)"
+            return
+        }
+        await backUpNow()
+    }
+    func stopAutoBackup() {
+        backupTask?.cancel()
+        defaults.removeObject(forKey: "backupBookmark"); defaults.removeObject(forKey: "backupFolderName")
+        backupFolderName = nil; backupProblem = nil
+    }
+    /// Records a manual export, which also counts as a recent backup.
+    func markExported() { recordBackup() }
+    /// Launch/foreground catch-up: back up when the last one is a day old or the previous attempt failed.
+    func backUpIfDue() async {
+        guard backupFolderName != nil, backupProblem != nil || BackupPlan.isDue(lastBackup: lastBackup) else { return }
+        await backUpNow()
+    }
+    /// Writes the current records to the backup folder. Failures are reported in `backupProblem`
+    /// (shown in Settings) rather than as an alert, because backups usually run in the background.
+    func backUpNow() async {
+        guard let bookmark = defaults.data(forKey: "backupBookmark"), !backingUp else { return }
+        backingUp = true
+        defer { backingUp = false }
+        do {
+            let data = try backupData()
+            let refreshed = try await Task.detached(priority: .utility) { try BackupWriter.write(data, bookmark: bookmark) }.value
+            // The folder may have been turned off while the write ran.
+            guard defaults.data(forKey: "backupBookmark") != nil else { return }
+            if let refreshed { defaults.set(refreshed, forKey: "backupBookmark") }
+            backupProblem = nil
+            recordBackup()
+        } catch {
+            backupProblem = "The last automatic backup failed. \(error.localizedDescription)"
+        }
+    }
+    private func recordBackup() {
+        lastBackup = .now
+        defaults.set(lastBackup, forKey: "lastBackup")
+    }
+    /// Coalesces bursts of edits (for example, an import) into one backup a moment later.
+    private func scheduleAutoBackup() {
+        guard backupFolderName != nil else { return }
+        backupTask?.cancel()
+        backupTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled, let self else { return }
+            if self.backingUp { self.scheduleAutoBackup(); return }
+            await self.backUpNow()
+        }
     }
     func scheduleNotifications() {
         let records = records; let enabled = remindersEnabled
