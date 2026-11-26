@@ -319,7 +319,7 @@ fun PaymentCalendar(state: UiState, actions: Actions) {
         else allPayments(state.records, month.atDay(1), month.plusMonths(1).atDay(1))
     }
     FullScreen("Payment calendar", onDismiss = actions::close) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("paymentCalendar"), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     listOf("Month", "Year").forEachIndexed { i, label -> SegmentedButton(annual == (i == 1), { annual = i == 1 }, SegmentedButtonDefaults.itemShape(i, 2)) { Text(label) } }

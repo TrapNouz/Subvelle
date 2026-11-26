@@ -92,6 +92,6 @@ class AppFlowTest {
         compose.onNodeWithTag("tab-analytics").performClick()
         compose.onNodeWithTag("analyticsList").performScrollToNode(hasTestTag("analyticsBottom"))
         compose.onNodeWithTag("analyticsBottom").performClick()
-        compose.onNodeWithText("Payment calendar").assertIsDisplayed()
+        compose.onNodeWithTag("paymentCalendar").assertIsDisplayed()
     }
 }

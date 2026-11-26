@@ -117,8 +117,7 @@ jobs:
           disable-animations: true
           working-directory: android
           script: |
-            ./gradlew connectedDebugAndroidTest --console=plain
-            adb shell dumpsys gfxinfo app.subspace.android | sed -n '/Total frames rendered/,/Number Frame deadline missed/p' || true
+            ./gradlew connectedDebugAndroidTest --console=plain; status=$?; echo "Frame timing (debug build, software-rendered emulator):"; adb shell dumpsys gfxinfo app.subspace.android | sed -n '/Total frames rendered/,/Number Frame deadline missed/p'; exit $status
       - uses: actions/upload-artifact@v4
         if: always()
         with:
