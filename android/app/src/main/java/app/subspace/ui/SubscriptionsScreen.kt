@@ -293,6 +293,11 @@ fun SubscriptionEditor(initial: SubscriptionRecord, isNew: Boolean, state: UiSta
     FullScreen(if (isNew) "New subscription" else "Edit subscription", onDismiss, dismissLabel = "Cancel",
         actions = { TextButton(onClick = ::save, modifier = Modifier.testTag("saveSubscription")) { Text("Save", fontWeight = FontWeight.Bold) } }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Shown at the top, next to the Save button, so the message is visible without scrolling.
+            validation?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f)).padding(14.dp).testTag("validation"))
+            }
             FormSection("Service") {
                 OutlinedTextField(record.name, { record = record.copy(name = it) }, label = { Text("Service name") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("serviceName"))
                 Text("Icon", style = MaterialTheme.typography.labelLarge)
@@ -342,7 +347,6 @@ fun SubscriptionEditor(initial: SubscriptionRecord, isNew: Boolean, state: UiSta
             FormSection("Notes") {
                 OutlinedTextField(record.notes, { record = record.copy(notes = it) }, minLines = 3, modifier = Modifier.fillMaxWidth(), label = { Text("Notes") })
             }
-            validation?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("validation")) }
             Spacer(Modifier.height(24.dp))
         }
     }

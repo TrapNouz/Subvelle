@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -41,7 +42,11 @@ class AppFlowTest {
         context.getSharedPreferences("settings", Context.MODE_PRIVATE).edit().clear().commit()
     }
     @After fun close() { scenario?.close() }
-    private fun launch() { scenario = ActivityScenario.launch(MainActivity::class.java); compose.waitForIdle() }
+    /** Launches and waits for the subscriptions to load (it happens off the main thread). */
+    private fun launch(readyTag: String = "tab-overview") {
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.waitUntil(15_000) { compose.onAllNodesWithTag(readyTag).fetchSemanticsNodes().isNotEmpty() }
+    }
 
     @Test fun addSubscriptionFromPresetAndSeeTotals() {
         launch()
@@ -64,7 +69,7 @@ class AppFlowTest {
         compose.onNodeWithTag("serviceName").performTextInput("Custom plan")
         compose.onNodeWithTag("paymentAmount").performTextInput("12.99 CAD")
         compose.onNodeWithTag("saveSubscription").performClick()
-        compose.onNodeWithText("Enter a valid payment amount.").assertIsDisplayed()
+        compose.onNodeWithTag("validation").assertIsDisplayed().assert(hasText("Enter a valid payment amount."))
     }
 
     /** 300 plans across currencies and intervals: every tab must render and scroll to its end. */
@@ -79,7 +84,7 @@ class AppFlowTest {
                 category = Category.entries[i % Category.entries.size], reminderDays = 3)
         }
         SubscriptionStore(context).save(records)
-        launch()
+        launch(readyTag = "overviewList")
         compose.onNodeWithTag("overviewList").performScrollToNode(hasTestTag("overviewBottom"))
         compose.onNodeWithTag("tab-subscriptions").performClick()
         compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasText("Plan 300", substring = true))
