@@ -1,6 +1,6 @@
 # Validation report
 
-Last updated 2026-11-26 for Subvelle 1.1.0.
+Last updated 2026-11-26 for Subvelle 1.1.1.
 
 ## Automated checks on every build
 
@@ -21,6 +21,7 @@ Last updated 2026-11-26 for Subvelle 1.1.0.
 
 ## Releases
 
+- [Subvelle 1.1.1](../../releases/tag/v1.1.1): first release for both phones. The app is renamed Subvelle, and the Android app (signed APK) ships alongside the iPhone IPA. Both builds passed every test before publishing: [iPhone build](../../actions/runs/45905834026) (core, storage and simulator UI tests) and [Android build](../../actions/runs/45905992066) (unit tests, lint, 4 emulator UI tests, and APK signature verified). Files: `Subvelle-1.1.1-20.ipa` and `Subvelle-1.1.1-11.apk`, each with a SHA-256 checksum.
 - [Subvelle 1.1.0](../../releases/tag/v1.1.0): automatic backup to a chosen folder; export file names use the local date.
 - [Subvelle 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
 - [Subvelle 1.0.0](../../releases/tag/v1.0.0): first release.
