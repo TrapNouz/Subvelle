@@ -1,6 +1,12 @@
 name: Test and build SideStore IPA
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Marketing version for a manual build (MAJOR.MINOR.PATCH); tag builds use the tag
+        required: false
+        default: 1.0.0
+        type: string
   push:
     tags: ['v*']
 permissions:
@@ -111,11 +117,13 @@ jobs:
             SimulatorMatrix.json
           if-no-files-found: error
       - name: Determine version
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
         run: |
           python3 - <<'PY'
           import os, re
           ref = os.environ.get('GITHUB_REF_NAME', '')
-          version = ref[1:] if os.environ.get('GITHUB_REF_TYPE') == 'tag' and ref.startswith('v') else '1.0.0'
+          version = ref[1:] if os.environ.get('GITHUB_REF_TYPE') == 'tag' and ref.startswith('v') else (os.environ.get('MANUAL_VERSION') or '1.0.0')
           if not re.fullmatch(r'\d+\.\d+\.\d+', version):
               raise SystemExit('Release tag must be vMAJOR.MINOR.PATCH (for example v1.0.0).')
           with open(os.environ['GITHUB_ENV'], 'a') as env:
