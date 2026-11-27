@@ -138,6 +138,13 @@ class CoreTest {
         assertFalse(AppVersion.isNewer("1.2.0-beta", "1.2.0"))
     }
 
+    @Test fun currenciesAreOnlyOnesIphoneAccepts() {
+        assertEquals(157, Currencies.codes.size)
+        listOf("DEM", "FRF", "ITL", "ESP", "VEB", "ZWD", "XAU", "XXX").forEach { assertFalse("$it must not be offered", it in Currencies.codes) }
+        (Currencies.common + Currencies.codes).forEach { java.util.Currency.getInstance(it) }  // all known to Java for names
+        assertTrue(Currencies.codes.containsAll(Currencies.common))
+    }
+
     @Test fun brandMatchingMatchesIos() {
         val catalog = app.subspace.ui.BrandCatalog
         assertEquals(app.subspace.R.drawable.brand_netflix, catalog.brand("Netflix")?.logo)
@@ -146,6 +153,10 @@ class CoreTest {
         assertEquals(0xFF113CCFL, catalog.brand("Disney Plus")?.argb)
         assertEquals(catalog.brand("Vidéotron"), catalog.brand("Videotron"))
         assertNull(catalog.brand("Plan 01")); assertNull(catalog.brand(""))
+        // Whole words only: lookalike names must not borrow another brand's logo.
+        listOf("Applebee's", "Uberti Gym", "Notional", "Calmer Yoga").forEach { assertNull(it, catalog.brand(it)) }
+        assertEquals(app.subspace.R.drawable.brand_youtube, catalog.brand("YouTube Premium Family")?.logo)
+        assertEquals(app.subspace.R.drawable.brand_netflix, catalog.brand("  Netflix   Standard ")?.logo)
         assertTrue(app.subspace.ui.Brand(null, 0xFFFFFC00L).prefersDarkForeground)
         assertFalse(app.subspace.ui.Brand(null, 0xFFE50914L).prefersDarkForeground)
     }

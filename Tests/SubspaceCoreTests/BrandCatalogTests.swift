@@ -22,6 +22,13 @@ import Testing
         #expect(BrandCatalog.brand(for: "Disney Plus")?.hex == "113CCF")
         #expect(BrandCatalog.brand(for: "Videotron") == BrandCatalog.brand(for: "Vidéotron"))
         #expect(BrandCatalog.brand(for: "Plan 01") == nil)
+        // Whole words only: lookalike names must not borrow another brand's logo.
+        #expect(BrandCatalog.brand(for: "Applebee's") == nil)
+        #expect(BrandCatalog.brand(for: "Uberti Gym") == nil)
+        #expect(BrandCatalog.brand(for: "Notional") == nil)
+        #expect(BrandCatalog.brand(for: "Calmer Yoga") == nil)
+        #expect(BrandCatalog.brand(for: "YouTube Premium Family")?.logo == "brand-youtube")
+        #expect(BrandCatalog.brand(for: "  Netflix   Standard ")?.logo == "brand-netflix")
         #expect(BrandCatalog.brand(for: "My subscription") == nil)
         #expect(BrandCatalog.brand(for: "") == nil)
     }

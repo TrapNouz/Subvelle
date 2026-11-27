@@ -136,11 +136,11 @@ private struct MiniYearChart: View {
         let calendar = Calendar.current
         let year = calendar.component(.year, from: .now)
         let month = calendar.component(.month, from: .now)
-        let totals: [Double] = (1...12).map { m in
-            guard let start = calendar.date(from: DateComponents(year: year, month: m, day: 1)),
-                  let end = calendar.date(byAdding: .month, value: 1, to: start) else { return 0 }
-            return NSDecimalNumber(decimal: store.total(store.payments(in: DateInterval(start: start, end: end)))).doubleValue
-        }
+        // One pass over the year's payments, grouped by month (not twelve separate passes).
+        let yearStart = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? .now
+        let yearEnd = calendar.date(byAdding: .year, value: 1, to: yearStart) ?? .now
+        let byMonth = Dictionary(grouping: store.payments(in: DateInterval(start: yearStart, end: yearEnd))) { calendar.component(.month, from: $0.date) }
+        let totals: [Double] = (1...12).map { NSDecimalNumber(decimal: store.total(byMonth[$0] ?? [])).doubleValue }
         let top = max(totals.max() ?? 0, 1)
         HStack(alignment: .bottom, spacing: 3) {
             ForEach(Array(totals.enumerated()), id: \.offset) { index, value in

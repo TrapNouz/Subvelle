@@ -109,7 +109,7 @@ fun AppRoot(state: UiState, model: AppModel) {
             override fun openSettings() { modal = null; openFolder = Tab.SETTINGS }
         }
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { model.backUpIfDue() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { model.refreshDay(); model.backUpIfDue() }
 
     if (state.loaded) FolderHome(state, model, actions, openFolder, onOpen = { openFolder = it }, onClose = { openFolder = null })
     else Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))

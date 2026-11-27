@@ -53,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -94,9 +95,11 @@ import java.time.format.DateTimeFormatter
 fun FolderHome(state: UiState, model: AppModel, actions: Actions, openFolder: Tab?, onOpen: (Tab) -> Unit, onClose: () -> Unit) {
     val tiles = remember { mutableStateMapOf<Tab, Rect>() }
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
-    // Keeps the last folder's content on screen while its panel animates closed.
-    var shown by remember { mutableStateOf(openFolder ?: Tab.OVERVIEW) }
-    if (openFolder != null) shown = openFolder
+    // The last opened folder keeps its content on screen while its panel animates closed. Updated
+    // after composition (not during it), so opening a folder does not trigger an extra recomposition.
+    val lastOpened = remember { mutableStateOf(openFolder ?: Tab.OVERVIEW) }
+    SideEffect { if (openFolder != null) lastOpened.value = openFolder }
+    val shown = openFolder ?: lastOpened.value
     val open = openFolder != null
     val blur by animateDpAsState(if (open) 20.dp else 0.dp, label = "blur")
     val homeScale by animateFloatAsState(if (open) 0.95f else 1f, label = "homeScale")
@@ -134,7 +137,7 @@ fun FolderHome(state: UiState, model: AppModel, actions: Actions, openFolder: Ta
 
 @Composable
 private fun HomeScreen(state: UiState, actions: Actions, onOpen: (Tab) -> Unit, onTile: (Tab, Rect) -> Unit) {
-    val today = remember { LocalDate.now() }
+    val today = LocalDate.now()
     LazyColumn(
         Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("homeList"),
         contentPadding = PaddingValues(20.dp),
@@ -239,8 +242,8 @@ private fun BoxScope.FolderPreview(tab: Tab, state: UiState) {
 /** Twelve small bars: scheduled payments in each month of the current year. */
 @Composable
 private fun MiniYearChart(state: UiState, modifier: Modifier) {
-    val now = remember { LocalDate.now() }
-    val totals = remember(state.records, state.rates, state.currency) {
+    val now = LocalDate.now()
+    val totals = remember(state.records, state.rates, state.currency, now.year) {
         val byMonth = allPayments(state.records, LocalDate.of(now.year, 1, 1), LocalDate.of(now.year + 1, 1, 1)).groupBy { it.date.monthValue }
         (1..12).map { state.total(byMonth[it].orEmpty()).toDouble() }
     }

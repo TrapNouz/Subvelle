@@ -273,7 +273,7 @@ struct RootView: View {
             await store.backUpIfDue()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { store.scheduleNotifications(); Task { await store.backUpIfDue() } }
+            if phase == .active { store.refreshDerived(); store.scheduleNotifications(); Task { await store.backUpIfDue() } }
         }
         // "Share → Subvelle" or "Open in Subvelle" from Files, Mail, Messages and other apps.
         .onOpenURL { url in

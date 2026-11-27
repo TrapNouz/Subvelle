@@ -26,12 +26,16 @@ object BrandCatalog {
     fun key(name: String): String =
         Normalizer.normalize(name, Normalizer.Form.NFKD).lowercase().replace("+", "plus").filter { it in 'a'..'z' || it in '0'..'9' }
 
-    /** Exact match, else the longest known name it starts with (so "Claude Pro" still finds Claude). */
+    /**
+     * Exact match, else the longest run of whole leading words that names a brand
+     * ("Claude Pro" and "Spotify Family" find their logos; "Applebee's" is not Apple).
+     */
     fun brand(name: String): Brand? {
-        val key = key(name)
-        if (key.length < 2) return null
-        entries[key]?.let { return it }
-        return entries.keys.filter { it.length >= 4 && key.startsWith(it) }.maxByOrNull { it.length }?.let { entries[it] }
+        val words = name.split(' ', '\t', '\n').map(::key).filter { it.isNotEmpty() }
+        for (length in words.size downTo 1) {
+            entries[words.take(length).joinToString("")]?.let { return it }
+        }
+        return null
     }
 
     private val entries: Map<String, Brand> = mapOf(

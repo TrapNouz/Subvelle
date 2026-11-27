@@ -124,13 +124,15 @@ public enum BrandCatalog {{
         let folded = name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX")).lowercased()
         return String(folded.replacingOccurrences(of: "+", with: "plus").unicodeScalars.filter {{ $0.isASCII && CharacterSet.alphanumerics.contains($0) }}.map(Character.init))
     }}
-    /// The brand for a service name: an exact match, else the longest known name it starts with
-    /// (so "Claude Pro" or "Spotify Family" still find their logos).
+    /// The brand for a service name: an exact match, else the longest run of whole leading words that
+    /// names a brand ("Claude Pro" and "Spotify Family" find their logos; "Applebee's" is not Apple).
     public static func brand(for name: String) -> Brand? {{
-        let key = key(name)
-        guard key.count >= 2 else {{ return nil }}
-        if let exact = entries[key] {{ return exact }}
-        return entries.keys.filter {{ $0.count >= 4 && key.hasPrefix($0) }}.max(by: {{ $0.count < $1.count }}).flatMap {{ entries[$0] }}
+        let words = name.components(separatedBy: .whitespaces).map(key).filter {{ !$0.isEmpty }}
+        guard !words.isEmpty else {{ return nil }}
+        for length in stride(from: words.count, through: 1, by: -1) {{
+            if let brand = entries[words.prefix(length).joined()] {{ return brand }}
+        }}
+        return nil
     }}
     static let entries: [String: Brand] = [
 {rows}
@@ -208,12 +210,16 @@ object BrandCatalog {{
     fun key(name: String): String =
         Normalizer.normalize(name, Normalizer.Form.NFKD).lowercase().replace("+", "plus").filter {{ it in 'a'..'z' || it in '0'..'9' }}
 
-    /** Exact match, else the longest known name it starts with (so "Claude Pro" still finds Claude). */
+    /**
+     * Exact match, else the longest run of whole leading words that names a brand
+     * ("Claude Pro" and "Spotify Family" find their logos; "Applebee's" is not Apple).
+     */
     fun brand(name: String): Brand? {{
-        val key = key(name)
-        if (key.length < 2) return null
-        entries[key]?.let {{ return it }}
-        return entries.keys.filter {{ it.length >= 4 && key.startsWith(it) }}.maxByOrNull {{ it.length }}?.let {{ entries[it] }}
+        val words = name.split(' ', '\\t', '\\n').map(::key).filter {{ it.isNotEmpty() }}
+        for (length in words.size downTo 1) {{
+            entries[words.take(length).joinToString("")]?.let {{ return it }}
+        }}
+        return null
     }}
 
     private val entries: Map<String, Brand> = mapOf(

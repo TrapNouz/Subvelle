@@ -170,6 +170,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     }
     fun dismissError() = _state.update { it.copy(error = null) }
 
+    /** Recomputes date-dependent figures (next payments, "today", active plans) after midnight or a resume. */
+    fun refreshDay() = _state.update { if (it.loaded) derive(it) else it }
+
     /** Asks GitHub for the newest release, only when the user taps "Check for updates". */
     fun checkForUpdates(installed: String) {
         if (_state.value.checkingUpdate) return

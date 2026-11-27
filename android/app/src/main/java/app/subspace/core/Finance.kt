@@ -157,10 +157,25 @@ object Money {
 
 object Currencies {
     val common = listOf("CAD", "USD", "EUR", "GBP", "AUD", "JPY", "CHF", "NZD", "CNY", "INR", "KRW", "BRL", "MXN", "SGD", "HKD", "SEK", "NOK", "DKK", "PLN", "CZK", "ZAR")
-    /** Circulating ISO 4217 codes (funds, metals and testing codes excluded). */
+    /**
+     * Circulating currencies, exactly the list the iPhone app accepts (Apple's
+     * `Locale.commonISOCurrencyCodes`), so every Android backup imports on iPhone. Java also knows
+     * withdrawn currencies (Deutsche Mark, French franc, …), which iOS rejects.
+     */
     val codes: Set<String> by lazy {
-        val excluded = setOf("XAU", "XAG", "XPT", "XPD", "XTS", "XXX", "XBA", "XBB", "XBC", "XBD", "XDR", "XSU", "XUA", "BOV", "CHE", "CHW", "CLF", "COU", "MXV", "USN", "USS", "UYI", "UYW")
-        Currency.getAvailableCurrencies().map { it.currencyCode }.filter { it.length == 3 && it !in excluded }.toSortedSet()
+        sortedSetOf(
+            "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN", "BAM", "BBD", "BDT", "BGN", "BHD",
+            "BIF", "BMD", "BND", "BOB", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHF", "CLP", "CNY",
+            "COP", "CRC", "CUC", "CUP", "CVE", "CZK", "DJF", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "EUR", "FJD",
+            "FKP", "GBP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HKD", "HNL", "HRK", "HTG", "HUF", "IDR",
+            "ILS", "INR", "IQD", "IRR", "ISK", "JMD", "JOD", "JPY", "KES", "KGS", "KHR", "KMF", "KPW", "KRW", "KWD",
+            "KYD", "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP",
+            "MRU", "MUR", "MVR", "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "NZD", "OMR", "PAB",
+            "PEN", "PGK", "PHP", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB", "RWF", "SAR", "SBD", "SCR", "SDG",
+            "SEK", "SGD", "SHP", "SLE", "SLL", "SOS", "SRD", "SSP", "STN", "SYP", "SZL", "THB", "TJS", "TMT", "TND",
+            "TOP", "TRY", "TTD", "TWD", "TZS", "UAH", "UGX", "USD", "UYU", "UZS", "VEF", "VES", "VND", "VUV", "WST",
+            "XAF", "XCD", "XOF", "XPF", "YER", "ZAR", "ZMW",
+        )
     }
     val others: List<String> by lazy { codes.filter { it !in common } }
     fun name(code: String, locale: Locale = Locale.getDefault()): String =

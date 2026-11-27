@@ -7,10 +7,10 @@ import SubspaceCore
     @ObservationIgnored private var notificationTask: Task<Void, Never>?
     private let defaults: UserDefaults
     private let context: ModelContext
-    private(set) var records: [SubscriptionRecord] = []
+    private(set) var records: [SubscriptionRecord] = [] { didSet { refreshDerived() } }
     var error: String?
     var notificationMessage: String?
-    private(set) var rates = ExchangeRates(rates: [:], updatedAt: .distantPast)
+    private(set) var rates = ExchangeRates(rates: [:], updatedAt: .distantPast) { didSet { refreshDerived() } }
     private(set) var refreshingRates = false
     @ObservationIgnored private var backupTask: Task<Void, Never>?
     /// Display name of the automatic-backup folder; nil when automatic backup is off.
@@ -20,7 +20,7 @@ import SubspaceCore
     /// Why the most recent automatic backup failed; nil when it succeeded.
     private(set) var backupProblem: String?
     private(set) var backingUp = false
-    var currency: String { didSet { defaults.set(currency, forKey: "reportingCurrency") } }
+    var currency: String { didSet { defaults.set(currency, forKey: "reportingCurrency"); refreshDerived() } }
     var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
     var remindersEnabled: Bool { didSet { defaults.set(remindersEnabled, forKey: "remindersEnabled") } }
     var defaultReminder: Int { didSet { defaults.set(defaultReminder, forKey: "defaultReminder") } }
@@ -39,10 +39,20 @@ import SubspaceCore
             catch { self.error = "The exchange-rate cache could not be read. Refresh rates to restore conversions." }
         }
         reload()
+        refreshDerived()
     }
     var visible: [SubscriptionRecord] { records.filter { !$0.archived } }
-    var summary: FinancialSummary { FinancialSummary(records: records, reportingCurrency: currency, rates: rates) }
-    var upcoming: [Payment] { records.compactMap { RecurrenceEngine().nextPayment($0) }.sorted { $0.date < $1.date } }
+    /// Totals and the next payment for each plan. Stored and recomputed only when records, rates,
+    /// currency or the day change, instead of on every read (screens read them many times per update).
+    private(set) var summary = FinancialSummary(records: [], reportingCurrency: "CAD", rates: ExchangeRates(rates: [:]))
+    private(set) var upcoming: [Payment] = []
+    /// Recomputes `summary` and `upcoming`; also called when the app returns to the foreground,
+    /// so "Today", next payments and active plans are right after midnight.
+    func refreshDerived() {
+        summary = FinancialSummary(records: records, reportingCurrency: currency, rates: rates)
+        let engine = RecurrenceEngine()
+        upcoming = records.compactMap { engine.nextPayment($0) }.sorted { $0.date < $1.date }
+    }
     func money(_ amount: Decimal) -> String { Money.format(amount, currency: currency) }
     func converted(_ record: SubscriptionRecord) -> Decimal? { rates.convert(record.amount, from: record.currency, to: currency) }
     func payments(in range: DateInterval) -> [Payment] {
