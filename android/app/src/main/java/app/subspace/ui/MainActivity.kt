@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -94,7 +95,7 @@ sealed interface Modal {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppRoot(state: UiState, model: AppModel) {
-    var tab by rememberSaveable { mutableStateOf(Tab.OVERVIEW) }
+    var openFolder by rememberSaveable { mutableStateOf<Tab?>(null) }
     var modal by remember { mutableStateOf<Modal?>(null) }
     val actions = remember(model) {
         object : Actions {
@@ -105,41 +106,13 @@ fun AppRoot(state: UiState, model: AppModel) {
             override fun calendar() { modal = Modal.Calendar }
             override fun close() { modal = modal?.back }
             override fun saved() { modal = (modal as? Modal.Editor)?.let { if (it.isNew) null else it.back } }
-            override fun openSettings() { modal = null; tab = Tab.SETTINGS }
+            override fun openSettings() { modal = null; openFolder = Tab.SETTINGS }
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { model.backUpIfDue() }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text(tab.title, fontWeight = FontWeight.Bold) },
-                actions = { IconButton(onClick = actions::add, modifier = Modifier.testTag("addSubscription")) { Icon(Icons.Rounded.Add, "Add subscription") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-            )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                Tab.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = tab == item, onClick = { tab = item },
-                        icon = { Icon(item.icon, null) }, label = { Text(item.title) },
-                        modifier = Modifier.testTag("tab-${item.name.lowercase()}"),
-                    )
-                }
-            }
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            if (state.loaded) when (tab) {
-                Tab.OVERVIEW -> OverviewScreen(state, actions)
-                Tab.SUBSCRIPTIONS -> SubscriptionsScreen(state, model, actions)
-                Tab.ANALYTICS -> AnalyticsScreen(state, actions)
-                Tab.SETTINGS -> SettingsScreen(state, model)
-            }
-        }
-    }
+    if (state.loaded) FolderHome(state, model, actions, openFolder, onOpen = { openFolder = it }, onClose = { openFolder = null })
+    else Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
 
     when (val current = modal) {
         Modal.Presets -> PresetPicker(state, onDismiss = actions::close, onPick = actions::create)
@@ -155,7 +128,7 @@ fun AppRoot(state: UiState, model: AppModel) {
             onDismissRequest = model::dismissIncoming,
             title = { Text("Import ${records.size} subscriptions?") },
             text = { Text("From a Subvelle backup file. Matching subscriptions will be replaced and others kept.") },
-            confirmButton = { TextButton(onClick = { model.confirmIncoming(); tab = Tab.SUBSCRIPTIONS }) { Text("Merge backup") } },
+            confirmButton = { TextButton(onClick = { model.confirmIncoming(); openFolder = Tab.SUBSCRIPTIONS }) { Text("Merge backup") } },
             dismissButton = { TextButton(onClick = model::dismissIncoming) { Text("Cancel") } },
         )
     }

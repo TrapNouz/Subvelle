@@ -1,6 +1,11 @@
 package app.subspace.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,15 +103,43 @@ fun SectionTitle(title: String, subtitle: String? = null) {
 }
 
 @Composable
-fun ServiceIcon(record: SubscriptionRecord, size: Int = 44) {
-    val initials = remember(record.name) { record.name.split(" ").filter { it.isNotEmpty() }.take(2).map { it.first() }.joinToString("").uppercase() }
-    Box(
-        Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.3).dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).clearAndSetSemantics { },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(iconFor(record.symbol), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size((size * 0.42).dp))
-            if (initials.isNotEmpty()) Text(initials, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+fun ServiceIcon(record: SubscriptionRecord, size: Int = 44) = BrandIcon(record.name, record.symbol, size)
+
+/**
+ * App-icon-style tile for a service: its logo on its brand colour when known (Simple Icons, CC0),
+ * a monogram on the brand colour when the brand has no available logo, otherwise the chosen symbol.
+ */
+@Composable
+fun BrandIcon(name: String, symbol: String = "creditcard.fill", size: Int = 44) {
+    val brand = remember(name) { BrandCatalog.brand(name) }
+    val initials = remember(name) { name.split(" ").filter { it.isNotEmpty() }.take(2).map { it.first() }.joinToString("").uppercase() }
+    val shape = RoundedCornerShape((size * 0.29).dp)
+    val density = LocalDensity.current
+    if (brand != null) {
+        val foreground = if (brand.prefersDarkForeground) Color.Black else Color.White
+        Box(
+            Modifier.size(size.dp).clip(shape).background(Color(brand.argb))
+                // Near-black brand tiles get a hairline so they stay visible on the dark background.
+                .then(if (brand.luminance < 0.03) Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), shape) else Modifier)
+                .clearAndSetSemantics { },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (brand.logo != null) {
+                Icon(painterResource(brand.logo), null, tint = foreground, modifier = Modifier.fillMaxSize().padding((size * 0.22).dp))
+            } else {
+                Text(initials, color = foreground, fontWeight = FontWeight.Bold, maxLines = 1,
+                    fontSize = with(density) { (size * if (initials.length > 1) 0.34 else 0.44).dp.toSp() })
+            }
+        }
+    } else {
+        Box(
+            Modifier.size(size.dp).clip(shape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).clearAndSetSemantics { },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(iconFor(symbol), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size((size * 0.42).dp))
+                if (initials.isNotEmpty() && size >= 36) Text(initials, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+            }
         }
     }
 }

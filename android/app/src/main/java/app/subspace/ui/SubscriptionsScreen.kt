@@ -242,9 +242,7 @@ fun PresetPicker(state: UiState, onDismiss: () -> Unit, onPick: (SubscriptionRec
             items(presets, key = { it.name }, contentType = { "preset" }) { preset ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { create(preset) }.padding(vertical = 6.dp, horizontal = 4.dp).testTag("preset-${preset.name}"),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                        Text(preset.initials, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
+                    BrandIcon(preset.name, preset.category.symbol)
                     Column(Modifier.weight(1f)) {
                         Text(preset.name)
                         Text(preset.category.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -253,7 +251,7 @@ fun PresetPicker(state: UiState, onDismiss: () -> Unit, onPick: (SubscriptionRec
                 }
             }
             if (presets.isEmpty()) item { Text("No results for “$search”.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp)) }
-            item { Text("Service names identify your subscriptions. Icons are original monograms or generic symbols, not official logos. Enter your actual price; plans and pricing vary.",
+            item { Text("Service names identify your subscriptions. Logos are trademarks of their owners, shown only to identify each service (logo artwork from Simple Icons, CC0). Enter your actual price; plans and pricing vary.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp)) }
         }
     }

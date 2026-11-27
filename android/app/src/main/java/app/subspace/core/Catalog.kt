@@ -10,22 +10,22 @@ data class ServicePreset(val name: String, val category: Category) {
     val initials: String get() = name.split(" ").filter { it.isNotEmpty() }.take(2).map { it.first() }.joinToString("")
 
     companion object {
-        /** Same 147 services as the iOS app. Names only: no logos and no assumed prices. */
+        /** Same 192 services as the iOS app. Names only: no logos and no assumed prices. */
         val all: List<ServicePreset> by lazy {
             val groups = listOf(
-                Category.STREAMING to listOf("Netflix", "Disney+", "YouTube Premium", "Apple TV", "Prime Video", "Hulu", "HBO Max", "Peacock", "Paramount+", "Crunchyroll", "MUBI", "BritBox", "Shudder", "Discovery+", "Criterion Channel", "Fubo", "DAZN"),
+                Category.STREAMING to listOf("Netflix", "Disney+", "YouTube Premium", "Apple TV", "Prime Video", "Hulu", "HBO Max", "Peacock", "Paramount+", "Crunchyroll", "MUBI", "BritBox", "Shudder", "Discovery+", "Criterion Channel", "Fubo", "DAZN", "YouTube TV", "Crave", "CBC Gem", "ICI TOU.TV EXTRA", "Club illico", "Nebula", "Plex Pass", "ESPN+", "Sling TV", "NBA League Pass", "Apple One"),
                 Category.MUSIC to listOf("Spotify", "Apple Music", "Tidal", "YouTube Music", "Deezer", "Amazon Music", "SoundCloud Go", "Qobuz", "Pandora"),
-                Category.AI to listOf("ChatGPT", "Claude", "Gemini", "Perplexity", "Cursor", "Midjourney", "GitHub Copilot", "Runway", "ElevenLabs", "Poe"),
-                Category.GAMING to listOf("Xbox Game Pass", "PlayStation Plus", "Nintendo Switch Online", "Roblox Premium", "EA Play", "Ubisoft+", "GeForce NOW", "Apple Arcade", "Humble Choice", "Final Fantasy XIV", "World of Warcraft"),
-                Category.PRIVACY to listOf("Mullvad", "Proton", "NordVPN", "Surfshark", "1Password", "Bitwarden", "addy.io", "ExpressVPN", "IVPN", "SimpleLogin", "Dashlane"),
-                Category.PRODUCTIVITY to listOf("Microsoft 365", "Notion", "Adobe Creative Cloud", "Todoist", "Evernote", "Slack", "Zoom", "Canva", "Fantastical", "Things Cloud", "Grammarly", "Obsidian Sync", "Readwise", "Superhuman"),
+                Category.AI to listOf("ChatGPT", "Claude", "Gemini", "Perplexity", "Cursor", "Midjourney", "GitHub Copilot", "Runway", "ElevenLabs", "Poe", "Le Chat Pro", "DeepL Pro", "SuperGrok", "Character.AI"),
+                Category.GAMING to listOf("Xbox Game Pass", "PlayStation Plus", "Nintendo Switch Online", "Roblox Premium", "EA Play", "Ubisoft+", "GeForce NOW", "Apple Arcade", "Humble Choice", "Final Fantasy XIV", "World of Warcraft", "Twitch Turbo", "Discord Nitro", "Google Play Pass"),
+                Category.PRIVACY to listOf("Mullvad", "Proton", "NordVPN", "Surfshark", "1Password", "Bitwarden", "addy.io", "ExpressVPN", "IVPN", "SimpleLogin", "Dashlane", "Proton VPN", "Kagi"),
+                Category.PRODUCTIVITY to listOf("Microsoft 365", "Notion", "Adobe Creative Cloud", "Todoist", "Evernote", "Slack", "Zoom", "Canva", "Fantastical", "Things Cloud", "Grammarly", "Obsidian Sync", "Readwise", "Superhuman", "Medium", "Feedly Pro"),
                 Category.CLOUD to listOf("iCloud+", "Google One", "Dropbox", "Box", "OneDrive", "Backblaze", "pCloud", "MEGA", "Sync.com"),
-                Category.FITNESS to listOf("Apple Fitness+", "Strava", "Peloton", "Fitbod", "Headspace", "Calm", "MyFitnessPal", "Whoop", "Oura", "Nike Training", "ClassPass"),
-                Category.EDUCATION to listOf("Duolingo", "Coursera", "Skillshare", "MasterClass", "Brilliant", "LinkedIn Learning", "Codecademy", "Babbel", "DataCamp", "Blinkist"),
+                Category.FITNESS to listOf("Apple Fitness+", "Strava", "Peloton", "Fitbod", "Headspace", "Calm", "MyFitnessPal", "Whoop", "Oura", "Nike Training", "ClassPass", "AllTrails+", "Fitbit Premium", "Garmin Connect+", "Zwift"),
+                Category.EDUCATION to listOf("Duolingo", "Coursera", "Skillshare", "MasterClass", "Brilliant", "LinkedIn Learning", "Codecademy", "Babbel", "DataCamp", "Blinkist", "Udemy Personal Plan", "Kobo Plus"),
                 Category.NEWS to listOf("The New York Times", "The Washington Post", "The Economist", "The Guardian", "Financial Times", "The Wall Street Journal", "The Atlantic", "The New Yorker", "Apple News+", "The Globe and Mail"),
                 Category.HOSTING to listOf("Squarespace", "Wix", "Webflow", "WordPress.com", "Ghost", "Shopify", "DigitalOcean", "Linode", "Hetzner", "Cloudflare", "Vercel", "Netlify"),
-                Category.DEVELOPER to listOf("GitHub", "GitLab", "JetBrains", "Tower", "Postman", "Sentry", "Linear", "Figma", "Sketch", "Docker", "Expo", "Raycast", "Setapp"),
-                Category.OTHER to listOf("Audible", "Kindle Unlimited", "Patreon", "Substack", "Amazon Prime", "Costco", "Instacart+", "Uber One", "DoorDash DashPass", "NYT Games"),
+                Category.DEVELOPER to listOf("GitHub", "GitLab", "JetBrains", "Tower", "Postman", "Sentry", "Linear", "Figma", "Sketch", "Docker", "Expo", "Raycast", "Setapp", "Tailscale"),
+                Category.OTHER to listOf("Audible", "Kindle Unlimited", "Patreon", "Substack", "Amazon Prime", "Costco", "Instacart+", "Uber One", "DoorDash DashPass", "NYT Games", "X Premium", "Snapchat+", "Telegram Premium", "Reddit Premium", "Tinder", "Bumble", "Hinge", "Lyft Pink", "Skip+", "Fizz", "Vidéotron", "Bell", "Rogers", "Telus", "Koodo", "Fido")
             )
             groups.flatMap { (category, names) -> names.map { ServicePreset(it, category) } }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
         }

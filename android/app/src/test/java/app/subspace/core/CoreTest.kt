@@ -120,8 +120,24 @@ class CoreTest {
     }
 
     @Test fun presetsMatchIos() {
-        assertEquals(147, ServicePreset.all.size)
+        assertEquals(192, ServicePreset.all.size)
+        assertEquals(ServicePreset.all.size, ServicePreset.all.map { it.name }.toSet().size)
+        val missing = ServicePreset.all.filter { app.subspace.ui.BrandCatalog.brand(it.name) == null }.map { it.name }
+        assertTrue("No brand for $missing", missing.isEmpty())
+        assertTrue(ServicePreset.all.count { app.subspace.ui.BrandCatalog.brand(it.name)?.logo != null } >= 120)
         assertEquals("YP", ServicePreset.all.first { it.name == "YouTube Premium" }.initials)
+    }
+
+    @Test fun brandMatchingMatchesIos() {
+        val catalog = app.subspace.ui.BrandCatalog
+        assertEquals(app.subspace.R.drawable.brand_netflix, catalog.brand("Netflix")?.logo)
+        assertEquals(app.subspace.R.drawable.brand_claude, catalog.brand("claude pro")?.logo)
+        assertEquals(app.subspace.R.drawable.brand_spotify, catalog.brand("Spotify Family")?.logo)
+        assertEquals(0xFF113CCFL, catalog.brand("Disney Plus")?.argb)
+        assertEquals(catalog.brand("Vidéotron"), catalog.brand("Videotron"))
+        assertNull(catalog.brand("Plan 01")); assertNull(catalog.brand(""))
+        assertTrue(app.subspace.ui.Brand(null, 0xFFFFFC00L).prefersDarkForeground)
+        assertFalse(app.subspace.ui.Brand(null, 0xFFE50914L).prefersDarkForeground)
     }
 
     @Test fun backupPlanRules() {

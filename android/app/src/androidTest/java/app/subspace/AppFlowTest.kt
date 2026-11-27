@@ -13,6 +13,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -47,7 +49,17 @@ class AppFlowTest {
     private fun shell(command: String): String =
         android.os.ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)).use { it.readBytes().decodeToString() }
 
-    private fun launch(readyTag: String = "tab-overview") {
+    /** Opens a home-screen folder (closing an open one first) and waits for its panel. */
+    private fun openFolder(name: String) {
+        if (compose.onAllNodesWithTag("closeFolder").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag("closeFolder").performClick()
+            compose.waitUntil(5_000) { compose.onAllNodesWithTag("folderPanel").fetchSemanticsNodes().isEmpty() }
+        }
+        compose.onNodeWithTag("folder-$name").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("folderPanel").fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private fun launch(readyTag: String = "folder-overview") {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(15_000) { compose.onAllNodesWithTag(readyTag).fetchSemanticsNodes().isNotEmpty() }
     }
@@ -60,9 +72,11 @@ class AppFlowTest {
         compose.onNodeWithTag("paymentAmount").performTextInput("12.99")
         compose.onNodeWithTag("saveSubscription").performClick()
         compose.waitForIdle()
+        compose.onNodeWithTag("folder-overview").assert(hasText("12.99", substring = true))
+        openFolder("overview")
         compose.onNodeWithTag("monthlyAverage").assertIsDisplayed()
         compose.onNodeWithTag("monthlyAverage").assert(hasText("12.99", substring = true))
-        compose.onNodeWithTag("tab-subscriptions").performClick()
+        openFolder("subscriptions")
         compose.onNodeWithTag("row-Netflix").assertIsDisplayed()
     }
 
@@ -74,6 +88,24 @@ class AppFlowTest {
         compose.onNodeWithTag("paymentAmount").performTextInput("12.99 CAD")
         compose.onNodeWithTag("saveSubscription").performClick()
         compose.onNodeWithTag("validation").assertIsDisplayed().assert(hasText("Enter a valid payment amount."))
+    }
+
+    /** Each folder opens from its tile and closes with ✕, Back, or a tap on the blurred backdrop. */
+    @Test fun foldersOpenAndCloseFromHome() {
+        launch()
+        listOf("overview", "subscriptions", "analytics", "settings").forEach { name ->
+            openFolder(name)
+            compose.onNodeWithTag("folderAddSubscription").assertIsDisplayed()
+            compose.onNodeWithTag("closeFolder").performClick()
+            compose.waitUntil(5_000) { compose.onAllNodesWithTag("folderPanel").fetchSemanticsNodes().isEmpty() }
+            compose.onNodeWithTag("folder-$name").assertIsDisplayed()
+        }
+        openFolder("analytics")
+        scenario?.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("folderPanel").fetchSemanticsNodes().isEmpty() }
+        openFolder("settings")
+        compose.onNodeWithTag("folderBackdrop").performTouchInput { click(androidx.compose.ui.geometry.Offset(centerX, 4f)) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("folderPanel").fetchSemanticsNodes().isEmpty() }
     }
 
     /** "Open with Subvelle" / "Share → Subvelle": a backup file handed to the app asks, then imports. */
@@ -91,12 +123,13 @@ class AppFlowTest {
     /** 300 plans across currencies and intervals: every tab must render and scroll to its end. */
     @Test fun largeDataSetScrollsEveryTab() {
         seedLargeDataSet()
-        launch(readyTag = "overviewList")
+        launch()
+        openFolder("overview")
         compose.onNodeWithTag("overviewList").performScrollToNode(hasTestTag("overviewBottom"))
-        compose.onNodeWithTag("tab-subscriptions").performClick()
+        openFolder("subscriptions")
         compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasText("Plan 300", substring = true))
         compose.onNodeWithTag("subscriptionsList").performScrollToNode(hasTestTag("subscriptionsBottom"))
-        compose.onNodeWithTag("tab-analytics").performClick()
+        openFolder("analytics")
         compose.onNodeWithTag("analyticsList").performScrollToNode(hasTestTag("analyticsBottom"))
         compose.onNodeWithTag("analyticsBottom").performClick()
         compose.onNodeWithTag("paymentCalendar").assertIsDisplayed()
@@ -109,7 +142,8 @@ class AppFlowTest {
      */
     @Test fun swipeScrollingFrameStatistics() {
         seedLargeDataSet()
-        launch(readyTag = "overviewList")
+        launch()
+        openFolder("overview")
         val metrics = context.resources.displayMetrics
         val x = metrics.widthPixels / 2
         val (low, high) = (metrics.heightPixels * 0.72).toInt() to (metrics.heightPixels * 0.30).toInt()
@@ -120,8 +154,8 @@ class AppFlowTest {
         Thread.sleep(1_000)
         shell("dumpsys gfxinfo ${context.packageName} reset")
         swipes()
-        compose.onNodeWithTag("tab-subscriptions").performClick(); Thread.sleep(800); swipes()
-        compose.onNodeWithTag("tab-analytics").performClick(); Thread.sleep(800); swipes()
+        openFolder("subscriptions"); Thread.sleep(800); swipes()
+        openFolder("analytics"); Thread.sleep(800); swipes()
         val stats = shell("dumpsys gfxinfo ${context.packageName}").lines()
             .filter { line -> listOf("Total frames rendered", "Janky frames", "50th percentile", "90th percentile", "95th percentile", "99th percentile", "Number Slow UI thread", "Number Frame deadline missed").any { line.trim().startsWith(it) } }
         stats.forEach { android.util.Log.i("SubspaceFrames", it.trim()) }
