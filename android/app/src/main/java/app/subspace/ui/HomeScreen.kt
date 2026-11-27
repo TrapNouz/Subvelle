@@ -112,7 +112,7 @@ fun FolderHome(state: UiState, model: AppModel, actions: Actions, openFolder: Ta
         Box(
             Modifier.fillMaxSize()
                 .graphicsLayer { scaleX = homeScale; scaleY = homeScale }
-                .then(if (Build.VERSION.SDK_INT >= 31) Modifier.blur(blur) else Modifier)
+                // EXPERIMENT: blur disabled to measure its scrolling cost.
                 // Hidden from screen readers and taps while a folder is open.
                 .then(if (open) Modifier.clearAndSetSemantics { } else Modifier),
         ) {
