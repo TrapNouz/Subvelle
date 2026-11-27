@@ -1,6 +1,6 @@
 # Validation report
 
-Last updated 2026-11-26 for Subvelle 1.1.1.
+Last updated 2026-11-27 for Subvelle 1.2.0.
 
 ## Automated checks on every build
 
@@ -21,6 +21,8 @@ Last updated 2026-11-26 for Subvelle 1.1.1.
 
 ## Releases
 
+- [Subvelle 1.2.0](../../releases/tag/v1.2.0): folder home screen on both phones (a folder pops out over the blurred home screen), 192 services with brand logos or brand-coloured monograms, opening a backup from Files or another app, and Apple's document picker for importing on iPhone. Before publishing: [iPhone build](../../actions/runs/45970492126) passed all 6 storage and import tests and all 6 simulator UI tests, including opening and closing every folder with ✕ and an outside tap; [Android release build](../../actions/runs/45973823765) passed 16 unit tests, lint, and 6 emulator UI tests, including folders (✕, Back, outside tap) and opening a backup from another app. Files: `Subvelle-1.2.0-24.ipa` and `Subvelle-1.2.0-16.apk`, each with a SHA-256 checksum.
+- Subvelle 1.1.3 and 1.1.2: importing on iPhone (a single file picker), and Share / Open with Subvelle on both phones.
 - [Subvelle 1.1.1](../../releases/tag/v1.1.1): first release for both phones. The app is renamed Subvelle, and the Android app (signed APK) ships alongside the iPhone IPA. Both builds passed every test before publishing: [iPhone build](../../actions/runs/45905834026) (core, storage and simulator UI tests) and [Android build](../../actions/runs/45905992066) (unit tests, lint, 4 emulator UI tests, and APK signature verified). Files: `Subvelle-1.1.1-20.ipa` and `Subvelle-1.1.1-11.apk`, each with a SHA-256 checksum.
 - [Subvelle 1.1.0](../../releases/tag/v1.1.0): automatic backup to a chosen folder; export file names use the local date.
 - [Subvelle 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
