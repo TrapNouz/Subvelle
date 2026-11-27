@@ -14,7 +14,7 @@ struct SubscriptionsView: View {
                 if store.records.isEmpty {
                     ScrollView {
                         VStack(spacing: 20) {
-                            SubscriptionEmptyState(title: "Everything recurring, together", message: "Search 147 familiar services or create your own. Enter the price you pay; we’ll take care of the schedule.", symbol: "rectangle.stack")
+                            SubscriptionEmptyState(title: "Everything recurring, together", message: "Search \(ServicePreset.all.count) familiar services or create your own. Enter the price you pay; we’ll take care of the schedule.", symbol: "rectangle.stack")
                             PrivacyFootnote().accessibilityIdentifier("subscriptionsBottom")
                         }.padding(20).frame(maxWidth: 700).frame(maxWidth: .infinity)
                     }
@@ -104,14 +104,14 @@ struct PresetPicker: View {
                     ForEach(presets) { preset in
                         Button { create(preset) } label: {
                             HStack(spacing: 14) {
-                                Text(preset.initials).font(.subheadline.bold()).foregroundStyle(Color.spaceAccent).frame(width: 44, height: 44).background(Color.spaceAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+                                BrandIcon(name: preset.name, symbol: preset.symbol)
                                 VStack(alignment: .leading, spacing: 4) { Text(preset.name).foregroundStyle(.primary); Text(preset.category.rawValue).font(.caption).foregroundStyle(.secondary) }
                                 Spacer(); Image(systemName: "plus").foregroundStyle(.secondary)
                             }.padding(.vertical, 3)
                         }
                     }
                     if presets.isEmpty { ContentUnavailableView.search(text: search) }
-                } header: { Text("\(presets.count) services") } footer: { Text("Service names identify your subscriptions. Icons are original monograms or Apple SF Symbols, not official logos. Enter your actual price; plans and pricing vary.") }
+                } header: { Text("\(presets.count) services") } footer: { Text("Service names identify your subscriptions. Logos are trademarks of their owners, shown only to identify each service (logo artwork from Simple Icons, CC0). Enter your actual price; plans and pricing vary.") }
             }
             .searchable(text: $search, prompt: "Netflix, ChatGPT, Spotify…")
             .navigationTitle("Find your service").navigationBarTitleDisplayMode(.inline)

@@ -17,7 +17,7 @@ import SubspaceCore
             assertNavigation()
             if tab == "Analytics" { XCTAssertFalse(element("spendingChart").exists) }
             capture("Empty-\(tab)-Top")
-            revealAboveTabBar(bottoms[index])
+            reveal(bottoms[index])
             capture("Empty-\(tab)-Bottom")
         }
     }
@@ -32,12 +32,19 @@ import SubspaceCore
         if !amount.isHittable { swipeUp() }
         amount.tap(); amount.typeText("12.99")
         element("saveSubscription").tap()
+        // Saving returns to the home screen, whose Overview folder previews the monthly total.
+        XCTAssertTrue(element("folder-overview").waitForExistence(timeout: 10))
+        XCTAssertTrue(element("folder-overview").label.contains("12.99"))
+        capture("Added-Home")
+        open("Overview")
         XCTAssertTrue(element("monthlyAverage").waitForExistence(timeout: 10))
         XCTAssertTrue(element("monthlyAverage").label.contains("12.99"))
         capture("Added-Overview")
         app.terminate()
         app.launchEnvironment["SUBSPACE_UI_TEST_RESET"] = "0"
         app.launch()
+        XCTAssertTrue(element("folder-overview").waitForExistence(timeout: 20))
+        open("Overview")
         XCTAssertTrue(element("monthlyAverage").waitForExistence(timeout: 10))
         XCTAssertTrue(element("monthlyAverage").label.contains("12.99"))
         open("Subscriptions")
@@ -59,7 +66,7 @@ import SubspaceCore
                 app.segmentedControls.buttons["Monthly"].tap()
                 capture("Analytics-Monthly")
             }
-            revealAboveTabBar(bottoms[index]); capture("Populated-\(tab)-Bottom")
+            reveal(bottoms[index]); capture("Populated-\(tab)-Bottom")
         }
         app.terminate()
         app.launchEnvironment["SUBSPACE_UI_TEST_RESET"] = "0"
@@ -78,7 +85,7 @@ import SubspaceCore
         try launch(populated: true, largeText: true, light: true)
         for (index, tab) in tabs.enumerated() {
             open(tab); assertNavigation(); capture("Accessibility-Light-\(tab)-Top")
-            revealAboveTabBar(bottoms[index]); capture("Accessibility-Light-\(tab)-Bottom")
+            reveal(bottoms[index]); capture("Accessibility-Light-\(tab)-Bottom")
         }
     }
     func testLandscapeSafeAreas() throws {
@@ -88,12 +95,28 @@ import SubspaceCore
         XCTAssertGreaterThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height, "The app must actually enter landscape")
         assertNavigation(); capture("Landscape-Overview")
         var unscrollable: [String] = []
-        if revealAboveTabBar("overviewBottom", skipIfUnscrollable: true) { capture("Landscape-Overview-Bottom") } else { unscrollable.append("Overview") }
+        if reveal("overviewBottom", skipIfUnscrollable: true) { capture("Landscape-Overview-Bottom") } else { unscrollable.append("Overview") }
         open("Settings"); assertNavigation(); capture("Landscape-Settings")
-        if revealAboveTabBar("settingsBottom", skipIfUnscrollable: true) { capture("Landscape-Settings-Bottom") } else { unscrollable.append("Settings") }
+        if reveal("settingsBottom", skipIfUnscrollable: true) { capture("Landscape-Settings-Bottom") } else { unscrollable.append("Settings") }
         if !unscrollable.isEmpty {
             throw XCTSkip("No synthesized gesture scrolled \(unscrollable.joined(separator: ", ")) in landscape on this simulator; the bottom-reachability check could not run.")
         }
+    }
+    /// The home screen shows four folders; each opens into a panel over a blurred background and
+    /// closes with its ✕ button or a tap on that background.
+    func testFoldersOpenAndCloseFromHome() throws {
+        try launch(populated: true)
+        capture("Home")
+        for tab in tabs {
+            open(tab); assertNavigation(); capture("Folder-\(tab)")
+            element("closeFolder").tap()
+            XCTAssertTrue(element("folderPanel").waitForNonExistence(timeout: 5), "Close must dismiss the folder: \(tab)")
+            for other in tabs { XCTAssertTrue(element("folder-" + other.lowercased()).isHittable, "Home folder not reachable after closing \(tab): \(other)") }
+        }
+        open("Analytics")
+        // Above the panel, in the status-bar margin, only the blurred backdrop can receive the tap.
+        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.012)).tap()
+        XCTAssertTrue(element("folderPanel").waitForNonExistence(timeout: 5), "Tapping outside must dismiss the folder")
     }
     private func launch(populated: Bool, largeText: Bool = false, light: Bool = false) throws {
         app = XCUIApplication()
@@ -120,31 +143,42 @@ import SubspaceCore
             app.launchEnvironment["SUBSPACE_UI_TEST_BACKUP"] = String(decoding: try JSONEncoder().encode(Backup(subscriptions: records)), as: UTF8.self)
         }
         app.launch()
-        XCTAssertTrue(app.tabBars.buttons["Overview"].waitForExistence(timeout: 20))
+        XCTAssertTrue(element("folder-overview").waitForExistence(timeout: 20))
     }
     private func element(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+    /// Opens a folder from the home screen, closing any open folder first.
     private func open(_ tab: String) {
-        let button = app.tabBars.buttons[tab]
-        XCTAssertTrue(button.waitForExistence(timeout: 10)); button.tap()
-        XCTAssertTrue(button.isSelected, "Selected tab must remain visible: \(tab)")
+        let close = element("closeFolder")
+        if close.exists && close.isHittable {
+            close.tap()
+            XCTAssertTrue(element("folderPanel").waitForNonExistence(timeout: 5))
+        }
+        let folder = element("folder-" + tab.lowercased())
+        XCTAssertTrue(folder.waitForExistence(timeout: 10)); folder.tap()
+        XCTAssertTrue(element("folderPanel").waitForExistence(timeout: 10), "Folder must open: \(tab)")
+        XCTAssertTrue(app.navigationBars[tab].waitForExistence(timeout: 10), "Folder must show its title: \(tab)")
     }
+    /// Inside an open folder: Close and Add are reachable and inside the panel.
     private func assertNavigation() {
-        for tab in tabs { XCTAssertTrue(app.tabBars.buttons[tab].isHittable, "Tab inaccessible: \(tab)") }
-        let add = element("addSubscription")
-        XCTAssertTrue(add.isHittable)
-        XCTAssertFalse(add.frame.intersects(app.tabBars.firstMatch.frame), "Add must not overlap tab navigation")
+        let panel = element("folderPanel").frame
+        for id in ["closeFolder", "addSubscription"] {
+            let control = element(id)
+            XCTAssertTrue(control.isHittable, "Not reachable: \(id)")
+            XCTAssertTrue(panel.insetBy(dx: -2, dy: -2).contains(control.frame), "Outside the folder: \(id)")
+        }
     }
-    /// Scrolls until `id` sits above the tab bar, then asserts it is reachable and unobstructed.
+    /// Scrolls until `id` is visible inside the open folder, then asserts it is reachable and not cut off.
     /// Returns false, without asserting, only when `skipIfUnscrollable` is set and no gesture
     /// strategy moved the content at all: the simulator could not be driven, so nothing about
     /// the layout was learned. Any movement means the normal assertions apply.
     @discardableResult
-    private func revealAboveTabBar(_ id: String, skipIfUnscrollable: Bool = false) -> Bool {
+    private func reveal(_ id: String, skipIfUnscrollable: Bool = false) -> Bool {
         let item = element(id)
+        let limit = element("folderPanel").frame.maxY
         var strategy = 0
         var moved = false
         for _ in 0..<24 {
-            if item.exists && item.isHittable && item.frame.maxY <= app.tabBars.firstMatch.frame.minY + 2 { break }
+            if item.exists && item.isHittable && item.frame.maxY <= limit + 2 { break }
             let before = scrollSignature(item)
             swipeUp(strategy: strategy)
             if scrollSignature(item) != before {
@@ -160,7 +194,7 @@ import SubspaceCore
             if skipIfUnscrollable && !moved { return false }
         }
         XCTAssertTrue(item.exists && item.isHittable, "Bottom content must remain reachable: \(id)")
-        XCTAssertLessThanOrEqual(item.frame.maxY, app.tabBars.firstMatch.frame.minY + 2, "Bottom content overlaps navigation: \(id)")
+        XCTAssertLessThanOrEqual(item.frame.maxY, limit + 2, "Bottom content is cut off by the folder edge: \(id)")
         return true
     }
     /// Progress probe: the target's position (it may not exist yet in lazy lists) and the

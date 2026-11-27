@@ -82,27 +82,14 @@ struct SettingsView: View {
                     // ISO 8601 formatting defaults to UTC; use the local day so evening exports are not dated tomorrow.
                     switch outcome { case .success: result = "Backup exported."; store.markExported(); case .failure(let error): store.error = error.localizedDescription }
                 })
-                .fileImporter(isPresented: $picking, allowedContentTypes: pickMode.contentTypes) { outcome in
-                    switch pickMode {
-                    case .folder:
-                        switch outcome {
-                        case .success(let folder): Task { await store.setBackupFolder(folder) }
-                        case .failure(let error): store.error = error.localizedDescription
-                        }
-                    case .backupFile:
-                        Task {
-                            do {
-                                let url = try outcome.get()
-                                // Off the main actor: an iCloud-only file is downloaded before reading.
-                                let (data, count) = try await Task.detached(priority: .userInitiated) { try AppStore.readBackupFile(at: url) }.value
-                                pendingImport = data; importCount = count
-                                // Ask only after the picker has finished closing; presenting during its
-                                // dismissal can be dropped silently.
-                                try? await Task.sleep(for: .milliseconds(600))
-                                confirmation = true
-                            } catch { store.error = error.localizedDescription }
-                        }
-                    }
+                // Apple's document picker directly, instead of SwiftUI's fileImporter, which on iOS 26
+                // could open the picker without accepting the tapped file.
+                .sheet(isPresented: $picking) {
+                    DocumentPicker(types: pickMode.contentTypes, copiesFile: pickMode == .backupFile) { url in
+                        picking = false
+                        handlePicked(url)
+                    } onCancel: { picking = false }
+                    .ignoresSafeArea()
                 }
                 .alert("Import \(importCount) subscriptions?", isPresented: $confirmation) {
                     Button("Merge backup") {
@@ -113,6 +100,56 @@ struct SettingsView: View {
                     Button("Cancel", role: .cancel) { pendingImport = nil }
                 } message: { Text("Matching subscriptions will be replaced and others kept. Export a backup first if needed.") }
         }
+    }
+}
+
+extension SettingsView {
+    fileprivate func handlePicked(_ url: URL) {
+        switch pickMode {
+        case .folder:
+            Task { await store.setBackupFolder(url) }
+        case .backupFile:
+            Task {
+                do {
+                    // Off the main actor; the picker already copied the file into the app.
+                    let (data, count) = try await Task.detached(priority: .userInitiated) { try AppStore.readBackupFile(at: url) }.value
+                    pendingImport = data; importCount = count
+                    // Ask only after the picker has finished closing.
+                    try? await Task.sleep(for: .milliseconds(600))
+                    confirmation = true
+                } catch { store.error = error.localizedDescription }
+            }
+        }
+    }
+}
+
+/// UIKit's document picker. With `copiesFile`, the chosen file is copied into the app (downloading it
+/// from iCloud first) and the copy's URL is returned; otherwise the original, security-scoped URL.
+struct DocumentPicker: UIViewControllerRepresentable {
+    let types: [UTType]
+    let copiesFile: Bool
+    let onPick: (URL) -> Void
+    let onCancel: () -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick, onCancel: onCancel) }
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: copiesFile)
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        picker.delegate = context.coordinator
+        return picker
+    }
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {
+        context.coordinator.onPick = onPick
+        context.coordinator.onCancel = onCancel
+    }
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        var onPick: (URL) -> Void
+        var onCancel: () -> Void
+        init(onPick: @escaping (URL) -> Void, onCancel: @escaping () -> Void) { self.onPick = onPick; self.onCancel = onCancel }
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            if let url = urls.first { onPick(url) } else { onCancel() }
+        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { onCancel() }
     }
 }
 

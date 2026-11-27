@@ -31,18 +31,54 @@ struct Surface<Content: View>: View {
             .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22))
     }
 }
+extension Color {
+    /// A colour from "RRGGBB".
+    init(hex: String) {
+        let value = UInt32(hex, radix: 16) ?? 0
+        self.init(red: Double((value >> 16) & 0xFF) / 255, green: Double((value >> 8) & 0xFF) / 255, blue: Double(value & 0xFF) / 255)
+    }
+}
 struct ServiceIcon: View {
     let record: SubscriptionRecord
-    private var initials: String { String(record.name.split(separator: " ").prefix(2).compactMap(\.first)).uppercased() }
+    var size: CGFloat = 44
+    var body: some View { BrandIcon(name: record.name, symbol: record.symbol, size: size) }
+}
+/// App-icon-style tile for a service: its logo on its brand colour when known (Simple Icons, CC0),
+/// a monogram on the brand colour when the brand has no available logo, otherwise the chosen symbol.
+struct BrandIcon: View {
+    let name: String
+    var symbol: String = "creditcard.fill"
+    var size: CGFloat = 44
+    private var initials: String { String(name.split(separator: " ").prefix(2).compactMap(\.first)).uppercased() }
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 13).fill(Color.spaceAccent.opacity(0.14))
-            VStack(spacing: 2) {
-                Image(systemName: UIImage(systemName: record.symbol) == nil ? "creditcard.fill" : record.symbol)
-                    .font(.system(size: 17, weight: .medium))
-                if !initials.isEmpty { Text(initials).font(.system(size: 9, weight: .bold)) }
+        let shape = RoundedRectangle(cornerRadius: size * 0.29, style: .continuous)
+        Group {
+            if let brand = BrandCatalog.brand(for: name) {
+                let foreground: Color = brand.prefersDarkForeground ? .black : .white
+                ZStack {
+                    shape.fill(Color(hex: brand.hex))
+                    if let logo = brand.logo {
+                        Image(logo).renderingMode(.template).resizable().scaledToFit()
+                            .foregroundStyle(foreground).padding(size * 0.22)
+                    } else {
+                        Text(initials).font(.system(size: size * (initials.count > 1 ? 0.34 : 0.44), weight: .bold, design: .rounded))
+                            .foregroundStyle(foreground).minimumScaleFactor(0.5).lineLimit(1).padding(.horizontal, size * 0.08)
+                    }
+                }
+                // Near-black brand tiles get a hairline so they stay visible on the dark background.
+                .overlay { shape.strokeBorder(.white.opacity(brand.luminance < 0.03 ? 0.16 : 0), lineWidth: 1) }
+            } else {
+                ZStack {
+                    shape.fill(Color.spaceAccent.opacity(0.14))
+                    VStack(spacing: 2) {
+                        Image(systemName: UIImage(systemName: symbol) == nil ? "creditcard.fill" : symbol)
+                            .font(.system(size: size * 0.38, weight: .medium))
+                        if !initials.isEmpty && size >= 36 { Text(initials).font(.system(size: size * 0.2, weight: .bold)) }
+                    }.foregroundStyle(Color.spaceAccent)
+                }
             }
-        }.foregroundStyle(Color.spaceAccent).frame(width: 44, height: 44).accessibilityHidden(true)
+        }
+        .frame(width: size, height: size).accessibilityHidden(true)
     }
 }
 struct SubscriptionRow: View {
@@ -100,7 +136,7 @@ struct BackupNotice: View {
     @Environment(AppNavigation.self) private var navigation
     var body: some View {
         if !store.records.isEmpty, store.backupProblem != nil || BackupPlan.isOverdue(lastBackup: store.lastBackup) {
-            Button { navigation.selected = .settings } label: {
+            Button { navigation.show(.settings) } label: {
                 Label(store.backupProblem != nil ? "Automatic backup failed · review it in Settings" : "No backup in the last \(BackupPlan.overdueAfterDays) days · set up iCloud Drive backup in Settings", systemImage: "exclamationmark.icloud")
                     .font(.caption).foregroundStyle(.orange).padding().frame(maxWidth: .infinity, alignment: .leading)
                     .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
@@ -109,16 +145,41 @@ struct BackupNotice: View {
     }
 }
 
-enum AppTab: String, CaseIterable { case overview, subscriptions, analytics, settings }
+/// The four sections, shown as folders on the home screen.
+enum AppTab: String, CaseIterable, Identifiable {
+    case overview, subscriptions, analytics, settings
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+    var symbol: String {
+        switch self {
+        case .overview: "square.grid.2x2.fill"
+        case .subscriptions: "rectangle.stack.fill"
+        case .analytics: "chart.xyaxis.line"
+        case .settings: "gearshape.fill"
+        }
+    }
+}
 enum AppSheet: String, Identifiable { case add; var id: String { rawValue } }
 @MainActor @Observable final class AppNavigation {
-    var selected: AppTab = .overview
+    /// The open folder; nil shows the home screen.
+    var openFolder: AppTab?
     var sheet: AppSheet?
+    /// Set by the root view from Reduce Motion: a cross-fade instead of the pop-out spring.
+    var reduceMotion = false
+    var folderAnimation: Animation { reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.46, dampingFraction: 0.84) }
+    func show(_ tab: AppTab) { withAnimation(folderAnimation) { openFolder = tab } }
+    func closeFolder() { withAnimation(folderAnimation) { openFolder = nil } }
 }
 private struct SubscriptionToolbar: ViewModifier {
     @Environment(AppNavigation.self) private var navigation
     func body(content: Content) -> some View {
         content.toolbar {
+            if navigation.openFolder != nil {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") { navigation.closeFolder() }
+                        .labelStyle(.iconOnly).accessibilityIdentifier("closeFolder")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Add subscription", systemImage: "plus") { navigation.sheet = .add }
                     .labelStyle(.iconOnly).accessibilityIdentifier("addSubscription")
@@ -167,21 +228,40 @@ struct RootView: View {
     @State private var navigation = AppNavigation()
     /// A backup handed to the app by Files or the share sheet, waiting for confirmation.
     @State private var openedBackup: OpenedBackup?
+    @State private var tileFrames: [AppTab: CGRect] = [:]
+    @State private var rootFrame: CGRect = .zero
     var body: some View {
         @Bindable var store = store
         @Bindable var navigation = navigation
-        // A nonoptional selection always refers to one of four visible tabs (iOS 27).
-        TabView(selection: $navigation.selected) {
-            Tab("Overview", systemImage: "square.grid.2x2", value: AppTab.overview) { OverviewView() }
-            Tab("Subscriptions", systemImage: "rectangle.stack", value: AppTab.subscriptions) { SubscriptionsView() }
-            Tab("Analytics", systemImage: "chart.xyaxis.line", value: AppTab.analytics) { AnalyticsView() }
-            Tab("Settings", systemImage: "gearshape", value: AppTab.settings) { SettingsView() }
+        ZStack {
+            HomeView(tileFrames: $tileFrames)
+                .scaleEffect(navigation.openFolder == nil || reduceMotion ? 1 : 0.94)
+                .allowsHitTesting(navigation.openFolder == nil)
+                .accessibilityHidden(navigation.openFolder != nil)
+            if let tab = navigation.openFolder {
+                // The home screen stays visible behind the open folder, blurred by a system material
+                // (which becomes opaque with Reduce Transparency). Tapping it closes the folder.
+                Rectangle().fill(.ultraThinMaterial)
+                    .overlay(Color.black.opacity(0.12))
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { navigation.closeFolder() }
+                    .accessibilityHidden(true)
+                    .transition(.opacity)
+                    .zIndex(1)
+                FolderPanel(tab: tab)
+                    .id(tab)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.22, anchor: anchor(for: tab)).combined(with: .opacity))
+                    .zIndex(2)
+            }
         }
-        .tint(.spaceAccent).tabBarMinimizeBehavior(.never)
-        // No bottom overlay/inset: TabView alone owns its navigation safe area.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { rootFrame = $0 }
+        .tint(.spaceAccent)
         .sheet(item: $navigation.sheet) { _ in PresetPicker() }
         .environment(navigation)
-        .sensoryFeedback(.selection, trigger: navigation.selected)
+        .sensoryFeedback(.selection, trigger: navigation.openFolder)
+        .onAppear { navigation.reduceMotion = reduceMotion }
+        .onChange(of: reduceMotion) { _, value in navigation.reduceMotion = value }
         .transaction { if reduceMotion { $0.animation = nil; $0.disablesAnimations = true } }
         .alert("Subvelle", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
         .task {
@@ -212,12 +292,20 @@ struct RootView: View {
                 Button("Merge backup") {
                     guard let backup = openedBackup else { return }
                     openedBackup = nil
-                    do { _ = try store.importBackup(backup.data); navigation.selected = .subscriptions }
+                    do { _ = try store.importBackup(backup.data); navigation.show(.subscriptions) }
                     catch { store.error = error.localizedDescription }
                 }
                 Button("Cancel", role: .cancel) { openedBackup = nil }
             } message: { Text("From a Subvelle backup file. Matching subscriptions will be replaced and others kept.") }
         }
+    }
+}
+
+extension RootView {
+    /// The open folder grows out of its tile: the scale anchor is the tile's centre on screen.
+    fileprivate func anchor(for tab: AppTab) -> UnitPoint {
+        guard let tile = tileFrames[tab], rootFrame.width > 0, rootFrame.height > 0 else { return .center }
+        return UnitPoint(x: (tile.midX - rootFrame.minX) / rootFrame.width, y: (tile.midY - rootFrame.minY) / rootFrame.height)
     }
 }
 
