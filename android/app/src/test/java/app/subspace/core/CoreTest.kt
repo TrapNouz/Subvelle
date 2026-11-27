@@ -128,6 +128,16 @@ class CoreTest {
         assertEquals("YP", ServicePreset.all.first { it.name == "YouTube Premium" }.initials)
     }
 
+    @Test fun updateVersionComparisonMatchesIos() {
+        assertEquals("1.2.0", AppVersion.normalized("v1.2.0"))
+        assertTrue(AppVersion.isNewer("v1.3.0", "1.2.0"))
+        assertTrue(AppVersion.isNewer("1.10.0", "1.9.9"))
+        assertFalse(AppVersion.isNewer("v1.2.0", "1.2.0"))
+        assertFalse(AppVersion.isNewer("1.2", "1.2.0"))
+        assertFalse(AppVersion.isNewer("1.1.3", "1.2.0"))
+        assertFalse(AppVersion.isNewer("1.2.0-beta", "1.2.0"))
+    }
+
     @Test fun brandMatchingMatchesIos() {
         val catalog = app.subspace.ui.BrandCatalog
         assertEquals(app.subspace.R.drawable.brand_netflix, catalog.brand("Netflix")?.logo)

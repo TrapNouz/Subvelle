@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/subvelle-logo.png" alt="Subvelle" width="560"></p>
+
 # Subvelle
 
 A private, local-first subscription tracker for your phone. Know what you pay, what renews next, and where your money goes, without accounts, ads, tracking, bank access, or paid APIs.
@@ -15,6 +17,7 @@ Subvelle is one app with a native version for each phone platform. Both versions
 - **Currencies**: report in any currency (CAD by default). Exact decimal math, with each amount converted before totals are added. Exchange rates come from Frankfurter's central-bank reference rates and are cached for offline use; missing rates are flagged, never guessed.
 - **Reminders**: local notifications 1, 3, 7 or 14 days before a renewal, around 9 AM local time.
 - **Backups**: export and import JSON, plus automatic backup after every change to a folder you choose, for example a cloud-drive folder. You can also open a backup straight from Files or another app: **Share → Subvelle** on iPhone, **Open with** or **Share → Subvelle** on Android. Backups from either version import into the other.
+- **About & updates**: Settings shows the installed version, links to this GitHub project, and has a **Check for updates** button that tells you when a newer release is available, with a link to download it.
 - **Accessible**: dark or system appearance, dynamic text sizes, screen-reader labels, and reduced-motion support (on iPhone, Reduce Motion turns the folder pop-out into a fade).
 
 ## Download
@@ -31,7 +34,7 @@ Each file has a `.sha256` checksum next to it. Updates install over the previous
 ## Privacy
 
 - Subscriptions are stored only on your phone.
-- The only network request fetches public exchange rates; your subscriptions are never sent.
+- Network requests: public exchange rates and, only when you tap **Check for updates**, GitHub's public list of releases. Your subscriptions are never sent.
 - Automatic backups are written only to the folder you choose.
 - Your phone's own device backup (iCloud Backup or Google backup) may include the app's data, depending on your settings.
 
@@ -69,7 +72,8 @@ Some code folders and modules still use the original internal name `Subspace`. I
 | `android/` | Android app (Kotlin, Jetpack Compose, Material 3): a port of the same core logic with JVM unit tests and emulator UI tests. |
 | `Subspace/Core/BrandCatalog.swift`, `Subspace/Resources/Assets.xcassets/Brands/` | iPhone service catalog and logos (generated). |
 | `android/app/src/main/java/app/subspace/ui/BrandCatalog.kt`, `android/app/src/main/res/drawable/brand_*.xml` | Android service catalog and logos (generated, same data). |
-| `Tools/` | `GenerateBrandCatalog.py` (services, brand colours and logos for both apps) and the screenshot contact-sheet renderer used by CI. |
+| `Tools/` | `GenerateBrandCatalog.py` (services, brand colours and logos for both apps), `GenerateAppIcon.py` (the Subvelle mark: iPhone app icon, Android adaptive and themed icons, in-app logo), and the screenshot contact-sheet renderer used by CI. |
+| `docs/` | README images, including the Subvelle logo. |
 | `.github/workflows/` | CI for both builds and publishing. |
 
 ## Building

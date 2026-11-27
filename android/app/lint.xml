@@ -5,4 +5,6 @@
     <!-- Library versions are pinned deliberately and upgraded together after testing. -->
     <issue id="GradleDependency" severity="ignore" />
     <issue id="NewerVersionAvailable" severity="ignore" />
+    <!-- Brand logos (Simple Icons) are small, cached, and only a few are drawn at once; some paths are detailed. -->
+    <issue id="VectorPath" severity="ignore" />
 </lint>

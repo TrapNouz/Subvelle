@@ -144,6 +144,8 @@ private fun HomeScreen(state: UiState, actions: Actions, onOpen: (Tab) -> Unit, 
         val width = Modifier.widthIn(max = 700.dp).fillMaxWidth()
         item(key = "header") {
             Row(width, verticalAlignment = Alignment.CenterVertically) {
+                Icon(androidx.compose.ui.res.painterResource(app.subspace.R.drawable.subvelle_mark), null, tint = androidx.compose.ui.graphics.Color.Unspecified, modifier = Modifier.size(46.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Subvelle", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
                     Text(today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

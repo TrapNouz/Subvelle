@@ -39,6 +39,33 @@ object RatesService {
     }
 }
 
+/** The newest published release on GitHub. */
+data class ReleaseInfo(val version: String, val url: String)
+
+/**
+ * Manual update check against the project's public GitHub releases. Runs only when the user taps
+ * "Check for updates"; the request carries no information about the user or their subscriptions.
+ */
+object UpdateService {
+    const val REPOSITORY = "https://github.com/TrapNouz/Subvelle"
+    private const val LATEST = "https://api.github.com/repos/TrapNouz/Subvelle/releases/latest"
+
+    /** Blocking; call from Dispatchers.IO. */
+    fun latest(): ReleaseInfo {
+        val connection = (URL(LATEST).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15_000; readTimeout = 15_000
+            setRequestProperty("Accept", "application/vnd.github+json")
+        }
+        try {
+            if (connection.responseCode != 200) throw DataException("GitHub didn’t answer the update check. Try again later.")
+            val json = AppJson.parseToJsonElement(connection.inputStream.use { it.readBytes().decodeToString() }).jsonObject
+            val tag = json["tag_name"]?.jsonPrimitive?.content ?: throw DataException("GitHub sent an unexpected answer.")
+            val url = json["html_url"]?.jsonPrimitive?.content ?: "$REPOSITORY/releases"
+            return ReleaseInfo(app.subspace.core.AppVersion.normalized(tag), url)
+        } finally { connection.disconnect() }
+    }
+}
+
 /**
  * Writes backups into a folder the user picked with the system folder picker (Storage Access
  * Framework). The permission is persisted, so later backups need no prompt. Works with on-device

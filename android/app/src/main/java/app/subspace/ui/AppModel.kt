@@ -53,11 +53,21 @@ data class UiState(
     val backingUp: Boolean = false,
     val notificationMessage: String? = null,
     val error: String? = null,
+    val checkingUpdate: Boolean = false,
+    val updateResult: UpdateResult? = null,
     /** A backup handed to the app by a file manager or the share sheet, waiting for confirmation. */
     val incomingImport: List<SubscriptionRecord>? = null,
 ) {
     val visible: List<SubscriptionRecord> get() = records.filter { !it.archived }
     fun converted(record: SubscriptionRecord) = rates.convert(record.amount, record.currency, currency)
+}
+
+/** Outcome of a manual update check. */
+@Immutable
+sealed interface UpdateResult {
+    data class UpToDate(val version: String) : UpdateResult
+    data class Available(val version: String, val url: String) : UpdateResult
+    data class Failed(val message: String) : UpdateResult
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -159,6 +169,21 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun dismissError() = _state.update { it.copy(error = null) }
+
+    /** Asks GitHub for the newest release, only when the user taps "Check for updates". */
+    fun checkForUpdates(installed: String) {
+        if (_state.value.checkingUpdate) return
+        _state.update { it.copy(checkingUpdate = true) }
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { app.subspace.data.UpdateService.latest() } }
+            _state.update { current ->
+                current.copy(checkingUpdate = false, updateResult = result.fold(
+                    onSuccess = { if (app.subspace.core.AppVersion.isNewer(it.version, installed)) UpdateResult.Available(it.version, it.url) else UpdateResult.UpToDate(installed) },
+                    onFailure = { UpdateResult.Failed("Couldn’t check for updates. ${it.message ?: ""}".trim()) },
+                ))
+            }
+        }
+    }
 
     /** Reads and validates a backup opened from another app; asks before importing. */
     fun openIncoming(uri: android.net.Uri) {

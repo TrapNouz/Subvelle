@@ -21,6 +21,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FolderOpen
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import app.subspace.BuildConfig
 import app.subspace.core.BackupPlan
 import app.subspace.core.Currencies
@@ -132,10 +135,32 @@ fun SettingsScreen(state: UiState, model: AppModel) {
             }
             state.backupProblem?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = ChartColors.warning) }
         }
+        FormSection("About & updates", "Checks GitHub’s public list of releases only when you tap. Nothing about you or your subscriptions is sent.") {
+            SettingRow("Installed version", BuildConfig.VERSION_NAME)
+            SettingRow("Subvelle on GitHub", icon = Icons.Rounded.Code) {
+                context.startActivity(Intent(Intent.ACTION_VIEW, app.subspace.data.UpdateService.REPOSITORY.toUri()))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).testTag("checkForUpdates")) {
+                    SettingRow("Check for updates", icon = Icons.Rounded.Sync, onClick = if (state.checkingUpdate) null else ({ model.checkForUpdates(BuildConfig.VERSION_NAME) }))
+                }
+                if (state.checkingUpdate) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            }
+            when (val update = state.updateResult) {
+                is UpdateResult.UpToDate -> Text("You’re up to date (${update.version})", style = MaterialTheme.typography.bodyMedium, color = androidx.compose.ui.graphics.Color(0xFF34C759))
+                is UpdateResult.Available -> {
+                    Text("Subvelle ${update.version} is available", style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    SettingRow("Download from GitHub", icon = Icons.Rounded.Download) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, update.url.toUri()))
+                    }
+                }
+                is UpdateResult.Failed -> Text(update.message, style = MaterialTheme.typography.bodySmall, color = ChartColors.warning)
+                null -> Unit
+            }
+        }
         FormSection("Privacy & information") {
             SettingRow("On-device storage · No accounts, ads, or tracking")
             SettingRow("Data & privacy details") { privacy = true }
-            SettingRow("Version", BuildConfig.VERSION_NAME)
             Text("Built for a clearer financial orbit.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("settingsBottom"))
         }
         Spacer(Modifier.height(16.dp))
@@ -162,7 +187,7 @@ fun SettingsScreen(state: UiState, model: AppModel) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Subvelle tracks your subscriptions locally. It does not connect to banks or cancel services. Pausing or canceling a record changes your tracking only.")
-                Text("The only network request fetches public central-bank reference rates from Frankfurter. Your subscriptions are never included.")
+                Text("Subvelle makes two kinds of network request: public central-bank reference rates from Frankfurter, and, only when you tap Check for updates, GitHub’s public list of Subvelle releases. Your subscriptions are never included.")
                 Text("Backups are JSON files with readable financial data. Automatic backups are written only to the folder you choose. Android’s device backup may include app data according to your phone’s settings.")
                 Text("Reminders are local notifications, checked daily. Delivery depends on your device’s notification and battery settings.")
             }

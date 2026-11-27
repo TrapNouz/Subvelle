@@ -67,11 +67,11 @@ struct SettingsView: View {
                     if let result { Text(result).font(.caption).foregroundStyle(.secondary) }
                 } header: { Text("Backup & restore") } footer: { Text("JSON backups include all plans. Import replaces matching IDs and preserves other plans. Export a recovery copy first.") }
                 AutoBackupSection(chooseFolder: { pickMode = .folder; picking = true })
+                UpdatesSection()
                 Section("Privacy & information") {
                     Label("On-device storage", systemImage: "internaldrive")
                     Label("No accounts, ads, or tracking", systemImage: "hand.raised")
                     NavigationLink("Data & privacy details") { PrivacyDetailsView() }
-                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                     Text("Built for a clearer financial orbit.").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("settingsBottom")
                 }
             }.navigationTitle("Settings")
@@ -153,6 +153,55 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 }
 
+/// Settings › About & updates: the installed version, the project on GitHub, and a manual check
+/// for a newer release.
+struct UpdatesSection: View {
+    private enum Result: Equatable { case upToDate(String), available(ReleaseInfo), failed(String) }
+    @State private var checking = false
+    @State private var result: Result?
+    var body: some View {
+        Section {
+            LabeledContent("Installed version", value: UpdateService.installedVersion).accessibilityIdentifier("installedVersion")
+            Link(destination: UpdateService.repository) {
+                Label("Subvelle on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+            }.accessibilityIdentifier("githubLink")
+            Button { Task { await check() } } label: {
+                HStack {
+                    Label("Check for updates", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    if checking { ProgressView() }
+                }
+            }
+            .disabled(checking).accessibilityIdentifier("checkForUpdates")
+            switch result {
+            case .upToDate(let version):
+                Label("You’re up to date (\(version))", systemImage: "checkmark.circle.fill").foregroundStyle(.green).font(.subheadline)
+            case .available(let release):
+                Label("Subvelle \(release.version) is available", systemImage: "sparkles").foregroundStyle(Color.spaceAccent).font(.subheadline.weight(.semibold))
+                Link(destination: release.url) { Label("Download from GitHub", systemImage: "arrow.down.circle.fill") }
+                    .accessibilityIdentifier("downloadUpdate")
+            case .failed(let message):
+                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.caption)
+            case nil:
+                EmptyView()
+            }
+        } header: { Text("About & updates") } footer: {
+            Text("Checks GitHub’s public list of releases only when you tap. Nothing about you or your subscriptions is sent. Install a new version the same way as before, with SideStore.")
+        }
+    }
+    private func check() async {
+        checking = true
+        defer { checking = false }
+        do {
+            let latest = try await UpdateService.latest()
+            let installed = UpdateService.installedVersion
+            result = AppVersion.isNewer(latest.version, than: installed) ? .available(latest) : .upToDate(installed)
+        } catch {
+            result = .failed("Couldn’t check for updates. \(error.localizedDescription)")
+        }
+    }
+}
+
 enum FilePickMode {
     case backupFile, folder
     /// Backups are matched broadly: files shared from other apps are often typed as plain text or
@@ -200,7 +249,7 @@ struct AboutSubspaceView: View {
     var body: some View {
         List {
             Section {
-                Label("Subvelle", systemImage: "circle.hexagongrid").font(.title2.bold())
+                Label { Text("Subvelle").font(.title2.bold()) } icon: { Image("SubvelleMark").resizable().scaledToFit().frame(width: 34, height: 34) }
                 Text("Clarity for every recurring payment.")
             }
             Section("Tracking, on your terms") {
@@ -217,7 +266,7 @@ struct PrivacyDetailsView: View {
                 Text("Financial records stay in the app’s SwiftData database. No account, advertising SDK, or third-party tracking is used. Device backups may include app data according to your iOS settings.")
             }
             Section("Exchange rates") {
-                Text("The only network request fetches public central-bank reference rates from Frankfurter. Your subscriptions are never included. Weekends and holidays use the most recent published rates. Unsupported pairs remain visible in their original currency and are excluded from converted totals.")
+                Text("Subvelle makes two kinds of network request: public central-bank reference rates from Frankfurter, and, only when you tap Check for updates, GitHub’s public list of Subvelle releases. Your subscriptions are never included. Weekends and holidays use the most recent published rates. Unsupported pairs remain visible in their original currency and are excluded from converted totals.")
                 if let url = URL(string: "https://frankfurter.dev") { Link("Frankfurter exchange rates", destination: url) }
             }
             Section("Backups") {

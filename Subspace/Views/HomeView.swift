@@ -43,7 +43,8 @@ struct HomeView: View {
         .background { SpaceBackground() }
     }
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 12) {
+            Image("SubvelleMark").resizable().scaledToFit().frame(width: 44, height: 44).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Subvelle").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
                 Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())).font(.subheadline).foregroundStyle(.secondary)
