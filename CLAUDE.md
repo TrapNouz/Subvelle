@@ -18,6 +18,10 @@ Android (`android/`, Kotlin + Compose). Code folders and modules keep the old in
   `release_tag=vX.Y.Z` (creates the release and attaches the APK), then `publish.yml` with the
   passing iPhone `run_id` and the same tag (adds the IPA and final notes).
 - After publishing, add the release and its test results to `VALIDATION.md`.
+- Publishing the iPhone build also commits the new version to `altstore/source.json` on `main`
+  (the Feather/AltStore source), as `github-actions[bot]`. So **pull `main` into your branch before
+  pushing to `main`**. `python3 Tools/update_altstore_source.py bootstrap` rebuilds the source from
+  the GitHub releases if it ever gets out of sync.
 
 ## Generated files (regenerate, don't hand-edit)
 

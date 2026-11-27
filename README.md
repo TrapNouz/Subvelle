@@ -31,6 +31,19 @@ Every release is on the [Releases page](../../releases). Pick the file for your 
 
 Each file has a `.sha256` checksum next to it. Updates install over the previous version and keep your data.
 
+### iPhone: get updates in Feather, AltStore or SideStore
+
+Add this source once, and new versions show up as updates in the app:
+
+```
+https://raw.githubusercontent.com/TrapNouz/Subvelle/main/altstore/source.json
+```
+
+- **Feather:** Sources → **+** → paste the URL → Add. Open Subvelle in the source to install or update.
+- **AltStore / SideStore:** Browse (or Sources) → **+** → paste the URL.
+
+The source (`altstore/source.json`) lists every iPhone release with its download link, and is updated automatically each time a new version is published.
+
 ## Privacy
 
 - Subscriptions are stored only on your phone.

@@ -70,6 +70,10 @@ jobs:
           with open(path + '.sha256', 'w') as checksum:
               checksum.write(digest + '  ' + os.path.basename(path) + '\n')
           print('Validated', path, digest)
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('IPA_FILE=' + os.path.basename(path) + '\n')
+              env.write('IPA_BUILD=' + str(info['CFBundleVersion']) + '\n')
+              env.write('IPA_SIZE=' + str(os.path.getsize(path)) + '\n')
           PY
       - name: Publish release with verified IPA
         env:
@@ -99,3 +103,23 @@ jobs:
             gh release create "$RELEASE_TAG" release/*.ipa release/*.sha256 --target "$SOURCE_SHA" \
               --title "Subvelle $RELEASE_TAG" --notes-file release-notes.md
           fi
+      # Feather, AltStore and SideStore read altstore/source.json on main; list the new version there.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: repo
+      - name: Add the version to the AltStore / Feather source
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd repo
+          python3 Tools/update_altstore_source.py add --version "${RELEASE_TAG#v}" --build "$IPA_BUILD" \
+            --url "https://github.com/$GH_REPO/releases/download/$RELEASE_TAG/$IPA_FILE" --size "$IPA_SIZE" \
+            --notes "Subvelle $RELEASE_TAG. Release notes: https://github.com/$GH_REPO/releases/tag/$RELEASE_TAG"
+          if git diff --quiet; then echo "Source already lists $RELEASE_TAG"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add altstore/source.json
+          git commit -m "AltStore source: add Subvelle $RELEASE_TAG"
+          git push origin HEAD:main
