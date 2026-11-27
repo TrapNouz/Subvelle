@@ -14,8 +14,8 @@ Subvelle is one app with a native version for each phone platform. Both versions
 - **Analytics**: interactive spending chart by month or by day, the normalized monthly average, cost by category, by subscription and by billing currency, and a full payment calendar.
 - **Currencies**: report in any currency (CAD by default). Exact decimal math, with each amount converted before totals are added. Exchange rates come from Frankfurter's central-bank reference rates and are cached for offline use; missing rates are flagged, never guessed.
 - **Reminders**: local notifications 1, 3, 7 or 14 days before a renewal, around 9 AM local time.
-- **Backups**: export and import JSON, plus automatic backup after every change to a folder you choose, for example a cloud-drive folder. Backups from either version import into the other.
-- **Accessible**: dark or system appearance, dynamic text sizes, screen-reader labels, and reduced-motion support.
+- **Backups**: export and import JSON, plus automatic backup after every change to a folder you choose, for example a cloud-drive folder. You can also open a backup straight from Files or another app: **Share → Subvelle** on iPhone, **Open with** or **Share → Subvelle** on Android. Backups from either version import into the other.
+- **Accessible**: dark or system appearance, dynamic text sizes, screen-reader labels, and reduced-motion support (on iPhone, Reduce Motion turns the folder pop-out into a fade).
 
 ## Download
 
@@ -41,7 +41,7 @@ Backups are readable JSON files containing financial data, so store and share th
 
 1. On the old phone: **Settings → Export backup** (or use the latest automatic backup file, `Subvelle Backup.json`).
 2. Copy the file to the new phone, for example through a cloud drive or by email to yourself.
-3. On the new phone: **Settings → Import backup**. Subscriptions with matching IDs are replaced; others are kept.
+3. On the new phone: **Settings → Import backup**, or open the file from Files or another app and choose **Subvelle** in the share menu. Subvelle asks before importing: subscriptions with matching IDs are replaced; others are kept.
 
 Version 1.1.0 named its automatic backups `Subspace Backup.json`. Newer versions write `Subvelle Backup.json` and leave the older files untouched; both import the same way.
 
@@ -67,6 +67,9 @@ Some code folders and modules still use the original internal name `Subspace`. I
 | `Tests/` | iPhone tests: core logic (also runs on Linux), storage, and simulator UI tests. |
 | `Package.swift`, `project.yml` | Swift package and the XcodeGen project definition. |
 | `android/` | Android app (Kotlin, Jetpack Compose, Material 3): a port of the same core logic with JVM unit tests and emulator UI tests. |
+| `Subspace/Core/BrandCatalog.swift`, `Subspace/Resources/Assets.xcassets/Brands/` | iPhone service catalog and logos (generated). |
+| `android/app/src/main/java/app/subspace/ui/BrandCatalog.kt`, `android/app/src/main/res/drawable/brand_*.xml` | Android service catalog and logos (generated, same data). |
+| `Tools/` | `GenerateBrandCatalog.py` (services, brand colours and logos for both apps) and the screenshot contact-sheet renderer used by CI. |
 | `.github/workflows/` | CI for both builds and publishing. |
 
 ## Building
@@ -75,8 +78,8 @@ No Mac is needed: both apps build and test on GitHub Actions. To start a build m
 
 | Workflow | Runs on | What it does |
 |---|---|---|
-| **iPhone · build, test and IPA** (`build.yml`) | macOS | Generates the Xcode project, runs core tests, storage tests and simulator UI tests, then builds an unsigned IPA. |
-| **Android · build, test and APK** (`android.yml`) | Linux | Runs unit tests and lint, builds an optimized and shrunk release APK signed with the project key, and runs emulator UI tests, including scrolling 300 subscriptions. |
+| **iPhone · build, test and IPA** (`build.yml`) | macOS | Generates the Xcode project, runs core tests, storage and import tests, and simulator UI tests (opening and closing every folder, adding a subscription, large text, landscape), then builds an unsigned IPA. |
+| **Android · build, test and APK** (`android.yml`) | Linux | Runs unit tests and lint, builds an optimized and shrunk release APK signed with the project key, and runs emulator UI tests: folders (✕, Back and outside tap), adding a subscription, opening a backup from another app, and scrolling 300 subscriptions. |
 | **Publish verified iPhone build** (`publish.yml`) | Linux | Attaches an IPA from a successful build to a release, after checking its version, identifier and architecture. |
 
 **Releases:** pushing a tag such as `v1.2.0` builds both apps with that version. The iPhone workflow creates the release, and the Android workflow attaches its APK once the release exists. A manual Android run with `release_tag` set attaches the APK to an existing release.
@@ -103,6 +106,17 @@ cd android
 
 The core Swift package also builds and tests on Linux with Swift 6: `swift test`.
 
+### Service catalog and logos
+
+Both apps use one generated catalog: the service list, each service's brand colour, and its logo where one is available. To add a service or update logos, edit the lists at the top of `Tools/GenerateBrandCatalog.py`, then run:
+
+```sh
+npm pack simple-icons && mkdir -p simple-icons && tar -xzf simple-icons-*.tgz -C simple-icons
+python3 Tools/GenerateBrandCatalog.py simple-icons/package .
+```
+
+It rewrites the presets, catalogs and logo files for both apps, and stops if a service has neither a logo nor a brand colour. Some brands have asked Simple Icons to remove their logos; those get a monogram in their brand colour, and no logo is taken from elsewhere.
+
 ### Identifiers
 
 | | iPhone | Android |
@@ -115,7 +129,7 @@ Changing an app ID creates a separate app with separate data, so export a backup
 ## Reliability
 
 - **Saving:** each version saves atomically and never deletes or recreates stored data that fails to load; a load failure is reported and the stored bytes are kept.
-- **Imports:** the whole file is validated before anything changes. Unsupported versions, duplicate IDs, invalid records, more than 10,000 records, and files over 20 MB are rejected.
+- **Imports:** a file picked on iPhone is copied into the app first (downloaded from iCloud if needed). The whole file is validated before anything changes, and Subvelle asks before merging. Unsupported versions, duplicate IDs, invalid records, more than 10,000 records, and files over 20 MB are rejected.
 - **Automatic backups:** writes are atomic or coordinated, a short burst of edits produces one backup, and a backup is retried at launch after a failure or when the last one is a day old. Fourteen daily copies are kept, and other files in the folder are never touched.
 - **Reminders:** on iPhone, the earliest 60 reminders in a rolling two-year window are queued and refreshed on launch and after edits. On Android, a daily background job posts that day's reminders, survives reboots, and never posts the same day twice. Delivery always depends on the phone's notification, Focus and battery settings.
 
