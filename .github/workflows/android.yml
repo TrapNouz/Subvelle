@@ -18,7 +18,8 @@ permissions:
   contents: read
 concurrency:
   group: android-${{ github.ref }}-${{ inputs.release_tag }}
-  cancel-in-progress: true
+  # Never cancel a running build (owner rule): a newer run waits for the current one.
+  cancel-in-progress: false
 defaults:
   run:
     working-directory: android
