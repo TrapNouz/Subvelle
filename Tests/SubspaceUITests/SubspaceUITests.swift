@@ -114,8 +114,10 @@ import SubspaceCore
             for other in tabs { XCTAssertTrue(element("folder-" + other.lowercased()).isHittable, "Home folder not reachable after closing \(tab): \(other)") }
         }
         open("Analytics")
-        // Above the panel, in the status-bar margin, only the blurred backdrop can receive the tap.
-        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.012)).tap()
+        // Just above the panel, in the visible blurred margin (below the status bar, which iOS keeps
+        // for scroll-to-top), only the backdrop can receive the tap.
+        let panel = element("folderPanel").frame
+        app.windows.firstMatch.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: panel.midX, dy: panel.minY - 10)).tap()
         XCTAssertTrue(element("folderPanel").waitForNonExistence(timeout: 5), "Tapping outside must dismiss the folder")
     }
     private func launch(populated: Bool, largeText: Bool = false, light: Bool = false) throws {

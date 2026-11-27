@@ -257,7 +257,8 @@ private fun FolderPanel(tab: Tab, state: UiState, model: AppModel, actions: Acti
     val drag = remember { Animatable(0f) }
     val shape = RoundedCornerShape(30.dp)
     Column(
-        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 8.dp, vertical = 6.dp)
+        // Real margins: the blurred home screen frames the open folder and can be tapped to close it.
+        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(start = 14.dp, end = 14.dp, top = 24.dp, bottom = 14.dp)
             .graphicsLayer {
                 translationY = drag.value
                 val s = 1f - drag.value.coerceAtMost(900f) / 9000f

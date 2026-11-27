@@ -186,7 +186,8 @@ struct FolderPanel: View {
         .clipShape(shape)
         .overlay { shape.strokeBorder(.white.opacity(0.08), lineWidth: 1) }
         .shadow(color: .black.opacity(0.35), radius: 30, y: 12)
-        .padding(.horizontal, 8).padding(.top, 4).padding(.bottom, 6)
+        // Real margins: the blurred home screen frames the open folder and can be tapped to close it.
+        .padding(.horizontal, 14).padding(.top, 24).padding(.bottom, 14)
         .offset(y: dragOffset)
         .scaleEffect(1 - min(dragOffset, 300) / 3000)
         .accessibilityElement(children: .contain)
