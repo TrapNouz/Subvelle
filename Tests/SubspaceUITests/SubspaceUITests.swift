@@ -179,7 +179,8 @@ import SubspaceCore
         let limit = element("folderPanel").frame.maxY
         var strategy = 0
         var moved = false
-        for _ in 0..<24 {
+        // Long screens at the largest text sizes (Settings is about 9 pages) need more swipes.
+        for _ in 0..<40 {
             if item.exists && item.isHittable && item.frame.maxY <= limit + 2 { break }
             let before = scrollSignature(item)
             swipeUp(strategy: strategy)
@@ -202,15 +203,18 @@ import SubspaceCore
     /// Progress probe: the target's position (it may not exist yet in lazy lists) and the
     /// accessibility value of the vertical scroll bar ("0%" until the content moves).
     private func scrollSignature(_ item: XCUIElement) -> String {
-        let bar = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Vertical scroll bar'")).firstMatch
+        // Only the open folder's scroll bar: the blurred home screen behind it has its own, which never moves.
+        let bar = element("folderPanel").descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Vertical scroll bar'")).firstMatch
         let position = item.exists ? String(format: "%.0f", item.frame.minY) : "absent"
         return position + "|" + (bar.exists ? (bar.value as? String ?? "") : "")
     }
     private func swipeUp(strategy: Int = 0) {
-        let list = app.collectionViews.firstMatch
-        let scroll = app.scrollViews.firstMatch
-        let container = list.exists && list.isHittable ? list : (scroll.exists && scroll.isHittable ? scroll : app.windows.firstMatch)
-        let window = app.windows.firstMatch
+        // Scroll the open folder's content, never the home screen behind it.
+        let panel = element("folderPanel")
+        let list = panel.collectionViews.firstMatch
+        let scroll = panel.scrollViews.firstMatch
+        let container = list.exists && list.isHittable ? list : (scroll.exists && scroll.isHittable ? scroll : panel)
+        let window = panel
         func drag(_ target: XCUIElement, from: CGVector, to: CGVector) {
             target.coordinate(withNormalizedOffset: from)
                 .press(forDuration: 0.05, thenDragTo: target.coordinate(withNormalizedOffset: to), withVelocity: .fast, thenHoldForDuration: 0)
