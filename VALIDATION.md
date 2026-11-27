@@ -1,6 +1,6 @@
 # Validation report
 
-Last updated 2026-11-27 for Subvelle 1.3.0.
+Last updated 2026-11-28 for Subvelle 1.3.1.
 
 ## Automated checks on every build
 
@@ -21,6 +21,7 @@ Last updated 2026-11-27 for Subvelle 1.3.0.
 
 ## Releases
 
+- [Subvelle 1.3.1](../../releases/tag/v1.3.1): audit release. Fixes: Android no longer offers 54 withdrawn currencies that iPhone rejects on import; lookalike names ("Applebee's", "Notional") no longer borrow a brand's logo; "Today", next payments and active plans refresh after midnight; one fewer recomposition per folder open on Android. Faster iPhone screens (totals and next payments computed once per change). New tests: iPhone property tests over random subscriptions in a daylight-saving time zone, and a cross-platform check where Android reproduces all 7,187 payment dates, next payments and totals computed by the iPhone code for 400 random subscriptions. Before publishing: [iPhone build](../../actions/runs/46075787145) passed all storage, import and UI tests; [Android release build](../../actions/runs/46080661714) passed 21 unit tests, lint and 6 emulator UI tests. Emulator scrolling measurement: the folder backdrop blur costs about a third of frame time on the GPU-less emulator (129 ms vs 85 ms median); real-phone smoothness still to be checked by hand. Files: `Subvelle-1.3.1-27.ipa` and `Subvelle-1.3.1-22.apk`.
 - [Subvelle 1.3.0](../../releases/tag/v1.3.0): new Subvelle logo and app icon on both phones, Settings › About & updates (GitHub link and Check for updates), and the AltStore / Feather source (`altstore/source.json`), updated automatically by the publish workflow. Before publishing: [iPhone build](../../actions/runs/45980748629) passed all storage, import and simulator UI tests; [Android release build](../../actions/runs/45984836685) passed 17 unit tests, lint, and 6 emulator UI tests. Files: `Subvelle-1.3.0-26.ipa` and `Subvelle-1.3.0-18.apk`, each with a SHA-256 checksum.
 - [Subvelle 1.2.0](../../releases/tag/v1.2.0): folder home screen on both phones (a folder pops out over the blurred home screen), 192 services with brand logos or brand-coloured monograms, opening a backup from Files or another app, and Apple's document picker for importing on iPhone. Before publishing: [iPhone build](../../actions/runs/45970492126) passed all 6 storage and import tests and all 6 simulator UI tests, including opening and closing every folder with ✕ and an outside tap; [Android release build](../../actions/runs/45973823765) passed 16 unit tests, lint, and 6 emulator UI tests, including folders (✕, Back, outside tap) and opening a backup from another app. Files: `Subvelle-1.2.0-24.ipa` and `Subvelle-1.2.0-16.apk`, each with a SHA-256 checksum.
 - Subvelle 1.1.3 and 1.1.2: importing on iPhone (a single file picker), and Share / Open with Subvelle on both phones.
