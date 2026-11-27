@@ -28,6 +28,10 @@ Last updated 2026-11-27 for Subvelle 1.2.0.
 - [Subvelle 1.0.1](../../releases/tag/v1.0.1): same-day end dates accepted; no alert when opening offline; correct "rates updated" date in the Americas.
 - [Subvelle 1.0.0](../../releases/tag/v1.0.0): first release.
 
+## Verified on a real phone
+
+- iPhone, Subvelle 1.2.0 installed with SideStore: **Settings → Import backup** with a backup file in iCloud Drive imports correctly (confirmed by the owner, 2026-11-27).
+
 ## Not yet verified on real phones
 
 Automated tests and simulators do not replace testing on devices. Still to check by hand:
