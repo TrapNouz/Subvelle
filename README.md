@@ -6,10 +6,10 @@ Subvelle is one app with a native version for each phone platform. Both versions
 
 ## Features
 
-- **Home (iPhone)**: one screen with four folders, Overview, Subscriptions, Analytics and Settings, each with a live preview. A folder pops open over a blurred background; close it with ✕, a tap outside, or a swipe down. Android uses a bottom tab bar.
-- **Service icons (iPhone)**: each service is shown with its logo on its brand colour, or a brand-coloured monogram when no logo is available. Logos are trademarks of their owners, shown only to identify each service; the artwork comes from [Simple Icons](https://simpleicons.org) (CC0). `Tools/GenerateBrandCatalog.py` regenerates the catalog.
+- **Home**: one screen with four folders, Overview, Subscriptions, Analytics and Settings, each with a live preview. A folder pops open over a blurred background (on Android, blur needs Android 12 or later; older versions dim it); close it with ✕, a tap outside, a swipe down, or Back on Android.
+- **Service icons**: each service is shown with its logo on its brand colour, or a brand-coloured monogram when no logo is available. Logos are trademarks of their owners, shown only to identify each service; the artwork comes from [Simple Icons](https://simpleicons.org) (CC0). `Tools/GenerateBrandCatalog.py` regenerates the catalog.
 - **Overview**: normalized monthly, annual and weekly cost, active plans, a countdown to the next payment, upcoming renewals, and your largest commitments.
-- **Subscriptions**: a catalog of familiar services (192 on iPhone, 147 on Android) in 13 categories, or create your own. No prices are assumed. Search, filter by status and category, and sort by renewal, amount or name. Pause, cancel, archive, restore, or delete with confirmation.
+- **Subscriptions**: 192 familiar services in 13 categories, or create your own. No prices are assumed. Search, filter by status and category, and sort by renewal, amount or name. Pause, cancel, archive, restore, or delete with confirmation.
 - **Flexible schedules**: weekly, every two weeks, monthly, quarterly, every six months, annually, or any custom interval of days, weeks, months or years, plus trials, end dates and notes.
 - **Analytics**: interactive spending chart by month or by day, the normalized monthly average, cost by category, by subscription and by billing currency, and a full payment calendar.
 - **Currencies**: report in any currency (CAD by default). Exact decimal math, with each amount converted before totals are added. Exchange rates come from Frankfurter's central-bank reference rates and are cached for offline use; missing rates are flagged, never guessed.
