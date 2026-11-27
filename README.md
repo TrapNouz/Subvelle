@@ -86,6 +86,8 @@ No Mac is needed: both apps build and test on GitHub Actions. To start a build m
 | **Android · build, test and APK** (`android.yml`) | Linux | Runs unit tests and lint, builds an optimized and shrunk release APK signed with the project key, and runs emulator UI tests: folders (✕, Back and outside tap), adding a subscription, opening a backup from another app, and scrolling 300 subscriptions. |
 | **Publish verified iPhone build** (`publish.yml`) | Linux | Attaches an IPA from a successful build to a release, after checking its version, identifier and architecture. |
 
+**Versions:** `MAJOR.MINOR.PATCH`, where the patch number counts 0 to 9 and then the minor number goes up: 1.3.0, 1.3.1, …, 1.3.9, then 1.4.0. `python3 Tools/next_version.py` prints the next number. Every release contains both apps with the same version, and is published only after both builds pass.
+
 **Releases:** pushing a tag such as `v1.2.0` builds both apps with that version. The iPhone workflow creates the release, and the Android workflow attaches its APK once the release exists. A manual Android run with `release_tag` set attaches the APK to an existing release.
 
 **Android signing:** release APKs are signed with a key stored in four repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Keep a private backup of the key file and password: every future update must be signed with the same key. Never commit key files (`.gitignore` blocks `*.jks` and `*.keystore`).
