@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -73,6 +74,18 @@ class AppFlowTest {
         compose.onNodeWithTag("paymentAmount").performTextInput("12.99 CAD")
         compose.onNodeWithTag("saveSubscription").performClick()
         compose.onNodeWithTag("validation").assertIsDisplayed().assert(hasText("Enter a valid payment amount."))
+    }
+
+    /** "Open with Subvelle" / "Share → Subvelle": a backup file handed to the app asks, then imports. */
+    @Test fun openingBackupFileFromAnotherAppImportsIt() {
+        val record = SubscriptionRecord(name = "Shared plan", amount = BigDecimal("4.99"), reminderDays = 3)
+        val file = File(context.cacheDir, "Subvelle Backup.json")
+        file.writeText(app.subspace.core.AppJson.encodeToString(app.subspace.core.Backup.serializer(), app.subspace.core.Backup(subscriptions = listOf(record))))
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.fromFile(file)).setClass(context, MainActivity::class.java)
+        scenario = ActivityScenario.launch(intent)
+        compose.waitUntil(15_000) { compose.onAllNodesWithText("Import 1 subscriptions?").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Merge backup").performClick()
+        compose.onNodeWithTag("row-Shared plan").assertIsDisplayed()
     }
 
     /** 300 plans across currencies and intervals: every tab must render and scroll to its end. */

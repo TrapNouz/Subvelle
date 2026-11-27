@@ -45,14 +45,32 @@ import app.subspace.core.SubscriptionRecord
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
 
+    fun incoming(uri: android.net.Uri) = model.openIncoming(uri)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIncoming(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) handleIncoming(intent)
         setContent {
             val state by model.state.collectAsStateWithLifecycle()
             SubspaceTheme(state.appearance) { AppRoot(state, model) }
         }
     }
+}
+
+/** Hands a backup from "Open with" or "Share" to the model, which asks before importing. */
+private fun MainActivity.handleIncoming(intent: android.content.Intent?) {
+    val uri = when (intent?.action) {
+        android.content.Intent.ACTION_VIEW -> intent.data
+        android.content.Intent.ACTION_SEND -> androidx.core.content.IntentCompat.getParcelableExtra(intent, android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+        else -> null
+    } ?: return
+    incoming(uri)
 }
 
 enum class Tab(val title: String, val icon: ImageVector) {
@@ -132,6 +150,15 @@ fun AppRoot(state: UiState, model: AppModel) {
         null -> Unit
     }
 
+    state.incomingImport?.let { records ->
+        AlertDialog(
+            onDismissRequest = model::dismissIncoming,
+            title = { Text("Import ${records.size} subscriptions?") },
+            text = { Text("From a Subvelle backup file. Matching subscriptions will be replaced and others kept.") },
+            confirmButton = { TextButton(onClick = { model.confirmIncoming(); tab = Tab.SUBSCRIPTIONS }) { Text("Merge backup") } },
+            dismissButton = { TextButton(onClick = model::dismissIncoming) { Text("Cancel") } },
+        )
+    }
     state.error?.let { message ->
         AlertDialog(
             onDismissRequest = model::dismissError, title = { Text("Subvelle") }, text = { Text(message) },

@@ -25,6 +25,17 @@ targets:
         excludes: [Core]
     dependencies:
       - package: SubspaceCore
+    # Lets Files and the share sheet hand a JSON backup to the app ("Share → Subvelle").
+    # "Alternate" rank: offered as an option, never made the default app for JSON files.
+    info:
+      path: Subspace/Info.plist
+      properties:
+        LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Subvelle backup
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.json, public.plain-text]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.subspace.ios

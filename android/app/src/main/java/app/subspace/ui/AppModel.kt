@@ -53,6 +53,8 @@ data class UiState(
     val backingUp: Boolean = false,
     val notificationMessage: String? = null,
     val error: String? = null,
+    /** A backup handed to the app by a file manager or the share sheet, waiting for confirmation. */
+    val incomingImport: List<SubscriptionRecord>? = null,
 ) {
     val visible: List<SubscriptionRecord> get() = records.filter { !it.archived }
     fun converted(record: SubscriptionRecord) = rates.convert(record.amount, record.currency, currency)
@@ -157,6 +159,19 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun dismissError() = _state.update { it.copy(error = null) }
+
+    /** Reads and validates a backup opened from another app; asks before importing. */
+    fun openIncoming(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { readBackup(context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw DataException("The file could not be opened.")) }
+            }
+            result.onSuccess { records -> _state.update { it.copy(incomingImport = records) } }
+                .onFailure { error -> showError((error as? DataException)?.message ?: "This backup could not be read. ${error.message ?: ""}") }
+        }
+    }
+    fun confirmIncoming() { _state.value.incomingImport?.let(::importRecords); _state.update { it.copy(incomingImport = null) } }
+    fun dismissIncoming() = _state.update { it.copy(incomingImport = null) }
     fun showError(message: String) = _state.update { it.copy(error = message) }
 
     // ---- Automatic folder backup ----
