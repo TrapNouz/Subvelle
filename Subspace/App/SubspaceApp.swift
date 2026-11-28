@@ -33,6 +33,6 @@ import SubspaceCore
         if let result = try UITestSupport.bootstrap() { return result }
         #endif
         let container = try Persistence.container()
-        return (container, AppStore(container: container))
+        return (container, AppStore(container: container, safetyCopyURL: AppStore.safetyCopyLocation, keychainKey: "subscriptions"))
     }
 }

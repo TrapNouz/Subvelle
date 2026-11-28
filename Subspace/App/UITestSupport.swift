@@ -19,7 +19,7 @@ import SubspaceCore
         if let cache = environment["SUBSPACE_UI_TEST_RATES"]?.data(using: .utf8) { defaults.set(cache, forKey: "exchangeRates") }
         defaults.set(environment["SUBSPACE_UI_TEST_APPEARANCE"] == "light" ? "system" : "dark", forKey: "appearance")
         let container = try Persistence.container(url: folder.appendingPathComponent("Subscriptions.store"))
-        let store = AppStore(container: container, defaults: defaults)
+        let store = AppStore(container: container, defaults: defaults, safetyCopyURL: folder.appendingPathComponent("Subvelle Backup.json"))
         if let data = environment["SUBSPACE_UI_TEST_BACKUP"]?.data(using: .utf8) { _ = try store.importBackup(data) }
         return (container, store)
     }

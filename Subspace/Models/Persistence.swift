@@ -20,11 +20,22 @@ enum SubspaceMigrationPlan: SchemaMigrationPlan {
 typealias StoredSubscription = SubspaceSchemaV1.StoredSubscription
 
 @MainActor enum Persistence {
+    /// The database's permanent home. Same path as SwiftData's default, so existing data stays put,
+    /// but set explicitly: the default never created `Application Support` on a fresh install, and the
+    /// store could end up in storage that iOS clears when the app has not been used for a while.
+    static var storeURL: URL { URL.applicationSupportDirectory.appendingPathComponent("default.store") }
+
     static func container(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
         let schema = Schema(versionedSchema: SubspaceSchemaV1.self)
         let configuration: ModelConfiguration
-        if let url { configuration = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none) }
-        else { configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory, cloudKitDatabase: .none) }
+        if inMemory && url == nil {
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+        } else {
+            let target = url ?? storeURL
+            // Create the folder first; SwiftData does not reliably do it.
+            try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            configuration = ModelConfiguration(schema: schema, url: target, cloudKitDatabase: .none)
+        }
         return try ModelContainer(for: schema, migrationPlan: SubspaceMigrationPlan.self, configurations: [configuration])
     }
 }

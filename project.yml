@@ -31,6 +31,7 @@ targets:
       path: Subspace/Info.plist
       properties:
         LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
         CFBundleDocumentTypes:
           - CFBundleTypeName: Subvelle backup
             CFBundleTypeRole: Viewer

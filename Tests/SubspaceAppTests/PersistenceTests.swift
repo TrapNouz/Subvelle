@@ -55,6 +55,40 @@ import SubspaceCore
         let entity = try XCTUnwrap(entities.first)
         XCTAssertEqual(try JSONDecoder().decode(SubscriptionRecord.self, from: entity.payload), record)
     }
+    func testLostDatabaseIsRestoredFromSafetyCopy() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let copy = directory.appendingPathComponent("Subvelle Backup.json")
+        let key = "test-\(UUID().uuidString)"
+        defer { SafetyKeychain.delete(account: key) }
+        let record = SubscriptionRecord(name: "Kept", amount: Decimal(999) / 100)
+        let first = AppStore(container: try Persistence.container(url: directory.appendingPathComponent("A.store")), safetyCopyURL: copy, keychainKey: key)
+        try first.save(record)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: copy.path))
+
+        // The database is gone (fresh, empty store): the file copy brings everything back.
+        let restored = AppStore(container: try Persistence.container(inMemory: true), safetyCopyURL: copy, keychainKey: key)
+        XCTAssertEqual(restored.records, [record])
+        XCTAssertNotNil(restored.error)
+
+        // Deleting everything by hand empties the copies, so nothing comes back afterwards.
+        try restored.delete(record)
+        XCTAssertTrue(AppStore(container: try Persistence.container(inMemory: true), safetyCopyURL: copy, keychainKey: key).records.isEmpty)
+    }
+    func testEmptyDatabaseNeverOverwritesFolderBackup() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "test-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = AppStore(container: try Persistence.container(inMemory: true), defaults: defaults)
+        await store.setBackupFolder(folder)
+        XCTAssertEqual(store.backupFolderName, folder.lastPathComponent)
+        await store.backUpNow()
+        let files = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+        XCTAssertTrue(files.isEmpty, "An empty database must not write a backup: \(files)")
+    }
     func testPayloadRoundTripsInNewContext() throws {
         let container = try Persistence.container(inMemory: true)
         let record = SubscriptionRecord(name: "Decimal", amount: Decimal(1099) / 100)

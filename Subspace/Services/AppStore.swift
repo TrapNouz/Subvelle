@@ -7,6 +7,12 @@ import SubspaceCore
     @ObservationIgnored private var notificationTask: Task<Void, Never>?
     private let defaults: UserDefaults
     private let context: ModelContext
+    /// A JSON copy of every subscription, rewritten after each change, in storage iOS never clears
+    /// (Documents, visible in Files › On My iPhone › Subvelle). Nil disables it (tests, previews).
+    private let safetyCopyURL: URL?
+    /// Keychain account for a second safety copy, kept by iOS even if the app's files are wiped.
+    private let keychainKey: String?
+    nonisolated static var safetyCopyLocation: URL { URL.documentsDirectory.appendingPathComponent("Subvelle Backup.json") }
     private(set) var records: [SubscriptionRecord] = [] { didSet { refreshDerived() } }
     var error: String?
     var notificationMessage: String?
@@ -24,8 +30,10 @@ import SubspaceCore
     var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
     var remindersEnabled: Bool { didSet { defaults.set(remindersEnabled, forKey: "remindersEnabled") } }
     var defaultReminder: Int { didSet { defaults.set(defaultReminder, forKey: "defaultReminder") } }
-    init(container: ModelContainer, defaults: UserDefaults = .standard) {
+    init(container: ModelContainer, defaults: UserDefaults = .standard, safetyCopyURL: URL? = nil, keychainKey: String? = nil) {
         self.defaults = defaults
+        self.safetyCopyURL = safetyCopyURL
+        self.keychainKey = keychainKey
         context = ModelContext(container)
         context.autosaveEnabled = false
         currency = defaults.string(forKey: "reportingCurrency") ?? "CAD"
@@ -40,6 +48,42 @@ import SubspaceCore
         }
         reload()
         refreshDerived()
+        restoreFromSafetyCopyIfNeeded()
+    }
+
+    /// If the database comes back empty while a safety copy still holds subscriptions, the database
+    /// was lost (deleting everything by hand also empties the copies): restore it.
+    /// Otherwise refresh the copies, so people updating from an older version get them right away.
+    private func restoreFromSafetyCopyIfNeeded() {
+        guard error == nil else { return }
+        guard records.isEmpty else { writeSafetyCopy(); return }
+        for (data, place) in safetyCopies() {
+            guard let backup = try? JSONDecoder().decode(Backup.self, from: data),
+                  let restored = try? backup.validated() else { continue }
+            guard !restored.isEmpty else { return } // the newest readable copy says "no subscriptions"
+            do {
+                let count = try importBackup(data)
+                error = "Subvelle found your data missing and restored \(count) subscriptions from its \(place)."
+            } catch {
+                self.error = "Your subscriptions are missing and could not be restored automatically. Use Settings › Import backup. \(error.localizedDescription)"
+            }
+            return
+        }
+    }
+    private func safetyCopies() -> [(Data, String)] {
+        var copies: [(Data, String)] = []
+        if let url = safetyCopyURL, let data = try? Data(contentsOf: url) { copies.append((data, "safety copy in Files")) }
+        if let key = keychainKey, let data = SafetyKeychain.read(account: key) { copies.append((data, "safety copy in the keychain")) }
+        return copies
+    }
+    /// Rewrites both safety copies; small, atomic, and done right after each successful change.
+    private func writeSafetyCopy() {
+        guard let data = try? backupData() else { return }
+        if let url = safetyCopyURL {
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: [.atomic])
+        }
+        if let key = keychainKey { SafetyKeychain.write(data, account: key) }
     }
     var visible: [SubscriptionRecord] { records.filter { !$0.archived } }
     /// Totals and the next payment for each plan. Stored and recomputed only when records, rates,
@@ -74,14 +118,14 @@ import SubspaceCore
             try context.save()
         } catch { context.rollback(); throw error }
         reload()
-        scheduleNotifications(); scheduleAutoBackup()
+        writeSafetyCopy(); scheduleNotifications(); scheduleAutoBackup()
     }
     func delete(_ record: SubscriptionRecord) throws {
         do {
             for entity in try context.fetch(FetchDescriptor<StoredSubscription>()) where entity.id == record.id { context.delete(entity) }
             try context.save()
         } catch { context.rollback(); throw error }
-        reload(); scheduleNotifications(); scheduleAutoBackup()
+        reload(); writeSafetyCopy(); scheduleNotifications(); scheduleAutoBackup()
     }
     func importBackup(_ data: Data) throws -> Int {
         guard data.count <= 20_000_000 else { throw DataError.invalid("Backup exceeds the 20 MB import limit.") }
@@ -96,7 +140,7 @@ import SubspaceCore
             }
             try context.save()
         } catch { context.rollback(); throw error }
-        reload(); scheduleNotifications(); scheduleAutoBackup(); return imported.count
+        reload(); writeSafetyCopy(); scheduleNotifications(); scheduleAutoBackup(); return imported.count
     }
     /// Reads and validates a backup picked in Files without changing anything; returns its bytes and
     /// record count. Opens the picker's security scope and uses a coordinated read, so a file that
@@ -177,6 +221,8 @@ import SubspaceCore
     /// (shown in Settings) rather than as an alert, because backups usually run in the background.
     func backUpNow() async {
         guard let bookmark = defaults.data(forKey: "backupBookmark"), !backingUp else { return }
+        // Never replace the last good backup with an empty one (for example after storage loss).
+        guard !records.isEmpty else { return }
         backingUp = true
         defer { backingUp = false }
         do {
